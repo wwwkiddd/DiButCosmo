@@ -12,41 +12,29 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 from aiogram.enums import ParseMode
 from dotenv import load_dotenv
+import json
 
 load_dotenv()
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('bot.log'),
-        logging.StreamHandler()
-    ]
-)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 logger = logging.getLogger(__name__)
 
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 ADMIN_IDS = list(map(int, os.getenv('ADMIN_IDS').split(',')))
+REVIEWS_CHAT_LINK = os.getenv('REVIEWS_CHAT_LINK', '')
+
 DB_PATH = os.getenv('DB_PATH', 'bot_database.db')
-REVIEWS_CHAT_LINK = os.getenv('REVIEWS_CHAT_LINK', 'https://t.me/your_reviews_chat')
+CONFIG_PATH = os.getenv('CONFIG_PATH', 'config.json')
 
-payment_context = {}  # user_id -> {slot, service, prepayment}
-
-bot = Bot(token=BOT_TOKEN)
+bot = Bot(token=BOT_TOKEN, parse_mode=ParseMode.HTML)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 
-
 class Form(StatesGroup):
-    language = State()
-    name = State()
-    phone = State()
-    gender = State()
-    birth_date = State()
-    service = State()
-    slot = State()
-    anamnesis = State()
-
+    service_config = State()
+    faq_config = State()
+    reviews_config = State()
+    edit_day = State()
 
 class AdminForm(StatesGroup):
     add_slots = State()
@@ -75,6 +63,13 @@ class Database:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 datetime TEXT NOT NULL,
                 available INTEGER DEFAULT 1
+            )
+        """)
+        await self.conn.execute("""
+            CREATE TABLE IF NOT EXISTS pending_payments (
+                user_id INTEGER PRIMARY KEY,
+                slot_time TEXT NOT NULL,
+                service TEXT NOT NULL
             )
         """)
         await self.conn.commit()
@@ -137,11 +132,38 @@ class Database:
         rows = await cursor.fetchall()
         return [{"id": row[0], "datetime": row[1]} for row in rows]
 
+    async def add_pending_payment(self, user_id: int, slot_time: str, service: str):
+        await self.conn.execute(
+            "INSERT OR REPLACE INTO pending_payments (user_id, slot_time, service) VALUES (?, ?, ?)",
+            (user_id, slot_time, service)
+        )
+        await self.conn.commit()
+
+    async def get_all_pending_payments(self):
+        cursor = await self.conn.execute("SELECT user_id, slot_time, service FROM pending_payments")
+        return await cursor.fetchall()
+
+    async def delete_pending_payment(self, user_id: int):
+        await self.conn.execute("DELETE FROM pending_payments WHERE user_id = ?", (user_id,))
+        await self.conn.commit()
+
     async def close(self):
         await self.conn.close()
 
 
 db = Database(DB_PATH)
+
+def load_config():
+    if not os.path.exists(CONFIG_PATH):
+        default = {"schedule": {}, "services": [], "reviews_link": "", "faq": ""}
+        with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
+            json.dump(default, f, ensure_ascii=False, indent=2)
+    with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+def save_config(config: dict):
+    with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
+        json.dump(config, f, ensure_ascii=False, indent=2)
 
 
 async def language_keyboard():
@@ -261,28 +283,29 @@ async def referral_coming_soon(message: types.Message):
 
 @dp.message(F.text.in_(["FAQ"]))
 async def faq_message(message: types.Message):
-    await message.answer("Популярные вопросы и ответы:\n\nВопрос 1 — Ответ 1\nВопрос 2 — Ответ 2")
+    config = load_config()
+    await message.answer(f"❓ FAQ:\n{config.get('faq','')}")
 
 
 @dp.message(F.text.in_(["Отзывы", "Reviews"]))
 async def reviews_message(message: types.Message):
-    await message.answer(
-        f"Наши отзывы: {REVIEWS_CHAT_LINK}" if message.text == "Отзывы" else f"Our reviews: {REVIEWS_CHAT_LINK}")
+    config = load_config()
+    await message.answer(f"Отзывы: {config.get('reviews_link','')}")
 
 
 @dp.message(F.text.in_(["Записаться на прием", "Make an appointment"]))
 async def start_appointment(message: types.Message, state: FSMContext):
     user = await db.get_user(message.from_user.id)
-    await state.set_state(Form.service)
-
-    services = ["Чистка лица", "Пилинг", "Массаж лица", "Маска"]
-    builder = InlineKeyboardBuilder()
+    config = load_config()
+    services = config.get("services", [])
+    if not services:
+        await message.answer("Услуг пока нет. Обратитесь к администратору.")
+        return
+    kb = InlineKeyboardBuilder()
     for s in services:
-        builder.button(text=s, callback_data=f"service_{s}")
-    builder.adjust(1)
-
-    await message.answer("Выберите услугу:" if user['language'] == 'ru' else "Choose a service:",
-                         reply_markup=builder.as_markup())
+        kb.button(text=s, callback_data=f"service_{s}")
+    kb.adjust(1)
+    await message.answer("Выберите услугу:", reply_markup=kb.as_markup())
 
 
 @dp.callback_query(F.data.startswith("service_"))
@@ -377,10 +400,7 @@ async def admin_confirm(callback: types.CallbackQuery):
             return
         slot_time = row[0]
 
-        payment_context[user_id] = {
-            "slot": slot_time,
-            "service": service
-        }
+        await db.add_pending_payment(user_id, slot_time, service)
 
         await callback.message.answer(
             "Введите сумму предоплаты и реквизиты (например, 900₽ на карту 1234 5678 9012 3456):")
@@ -392,19 +412,18 @@ async def admin_confirm(callback: types.CallbackQuery):
 @dp.message()
 async def receive_payment_info(message: types.Message):
     if message.from_user.id in ADMIN_IDS:
-        for user_id, ctx in payment_context.items():
-            slot_time = ctx["slot"]
-            service = ctx["service"]
+        pending_payments = await db.get_all_pending_payments()
+        for user_id, slot_time, service in pending_payments:
             text = f"""
-✅ Ваша запись подтверждена!
+        ✅ Ваша запись подтверждена!
 
-🧴 Услуга: {service}
-🕒 Дата и время: {slot_time}
+        🧴 Услуга: {service}
+        🕒 Дата и время: {slot_time}
 
-💰 Предоплата: {message.text}
+        💰 Предоплата: {message.text}
 
-Пожалуйста, подтвердите оплату:
-"""
+        Пожалуйста, подтвердите оплату:
+        """
             await bot.send_message(
                 user_id,
                 text,
@@ -413,7 +432,7 @@ async def receive_payment_info(message: types.Message):
                 .button(text="❌ Отменить", callback_data=f"decline_{user_id}")
                 .as_markup()
             )
-        payment_context.clear()
+            await db.delete_pending_payment(user_id)
 
 
 @dp.callback_query(F.data.startswith(("paid_", "decline_")))
@@ -432,26 +451,82 @@ async def payment_response(callback: types.CallbackQuery):
             await bot.send_message(admin_id, f"⚠️ Пользователь {user['name']} отменил запись.")
 
 
-@dp.message(F.text == "Добавить свободные окна")
-async def handle_add_slots(message: types.Message, state: FSMContext):
+@dp.message(F.text == "Настроить расписание")
+async def configure_schedule(message: types.Message):
     if message.from_user.id not in ADMIN_IDS:
         return
-        await state.set_state(AdminForm.add_slots)
-        await message.answer(
-            "Введите даты и время через Enter (например:\n16.03 17:00\n17.03 14:30):"
-        )
+    days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    buttons = [InlineKeyboardBuilder().button(text=day.capitalize(), callback_data=f"edit_day_{day}") for day in days]
+    kb = InlineKeyboardBuilder()
+    for b in buttons:
+        kb.button(text=b.button.text, callback_data=b.button.callback_data)
+    kb.adjust(2)
+    await message.answer("Выберите день недели:", reply_markup=kb.as_markup())
 
+@dp.callback_query(F.data.startswith("edit_day_"))
+async def ask_day_slots(callback: types.CallbackQuery, state: FSMContext):
+    day = callback.data.split("_", 2)[2]
+    await state.update_data(edit_day=day)
+    await state.set_state(Form.edit_day)
+    await callback.message.answer(f"Введите время для {day.capitalize()} через запятую (формат HH:MM, например 10:00,14:30):")
 
-@dp.message(AdminForm.add_slots)
-async def add_slots_process(message: types.Message, state: FSMContext):
-    raw_slots = message.text.strip().splitlines()
-    added = await db.add_slots(raw_slots)
+@dp.message(Form.edit_day)
+async def save_day_slots(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    day = data["edit_day"]
+    times = [t.strip() for t in message.text.split(",") if t.strip()]
+    config = load_config()
+    config.setdefault("schedule", {})[day] = times
+    save_config(config)
+    await message.answer(f"✅ Расписание на {day.capitalize()} сохранено: {times}")
+    await state.clear()
 
-    if added > 0:
-        await message.answer(f"✅ Добавлено {added} свободных окон.")
-    else:
-        await message.answer("⚠️ Не удалось добавить ни одного окна. Проверьте формат даты (дд.мм чч:мм).")
+@dp.message(F.text == "Настроить услуги")
+async def configure_services(message: types.Message, state: FSMContext):
+    if message.from_user.id not in ADMIN_IDS:
+        return
+    await state.set_state(Form.service_config)
+    await message.answer("Введите услуги через запятую (например: Чистка лица, Пилинг, Массаж):")
 
+@dp.message(Form.service_config)
+async def save_services(message: types.Message, state: FSMContext):
+    services = [s.strip() for s in message.text.split(",") if s.strip()]
+    config = load_config()
+    config["services"] = services
+    save_config(config)
+    await message.answer(f"✅ Услуги сохранены: {services}")
+    await state.clear()
+
+@dp.message(F.text == "Настроить FAQ")
+async def configure_faq(message: types.Message, state: FSMContext):
+    if message.from_user.id not in ADMIN_IDS:
+        return
+    await state.set_state(Form.faq_config)
+    await message.answer("Введите текст FAQ:")
+
+@dp.message(Form.faq_config)
+async def save_faq(message: types.Message, state: FSMContext):
+    faq = message.text.strip()
+    config = load_config()
+    config["faq"] = faq
+    save_config(config)
+    await message.answer("✅ FAQ сохранён.")
+    await state.clear()
+
+@dp.message(F.text == "Настроить отзывы")
+async def configure_reviews(message: types.Message, state: FSMContext):
+    if message.from_user.id not in ADMIN_IDS:
+        return
+    await state.set_state(Form.reviews_config)
+    await message.answer("Введите ссылку на чат отзывов (URL):")
+
+@dp.message(Form.reviews_config)
+async def save_reviews(message: types.Message, state: FSMContext):
+    url = message.text.strip()
+    config = load_config()
+    config["reviews_link"] = url
+    save_config(config)
+    await message.answer(f"✅ Ссылка сохранена: {url}")
     await state.clear()
 
 

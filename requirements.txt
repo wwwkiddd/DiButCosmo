@@ -1,5 +1,7 @@
 fastapi
-uvicorn
+uvicorn[standard]
 python-dotenv
 pydantic
 aiofiles
+aiogram
+aiosqlite
