@@ -20,7 +20,7 @@ document.getElementById("bot-form").addEventListener("submit", async (e) => {
     const data = await response.json();
 
     if (response.ok) {
-      result.textContent = `✅ Бот создан! Вот ссылка: https://t.me/${getUsernameFromToken(botToken)}`;
+      result.textContent = `✅ Бот создан! Вот ссылка: https://t.me/${data.bot_username}`;
     } else {
       result.textContent = `❌ Ошибка: ${data.detail}`;
     }
@@ -28,8 +28,3 @@ document.getElementById("bot-form").addEventListener("submit", async (e) => {
     result.textContent = "❌ Не удалось подключиться к серверу.";
   }
 });
-
-function getUsernameFromToken(token) {
-  const parts = token.split(":");
-  return "your_bot"; // можно заменить на реальный username через Telegram API
-}

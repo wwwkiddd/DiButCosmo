@@ -18,16 +18,17 @@ async def init_db():
         ''')
         await db.commit()
 
-async def set_subscription(bot_id, bot_token, admin_ids, months: int):
-    await init_db()
-    now = datetime.utcnow()
-    end_date = now + timedelta(days=30 * months)
+async def set_subscription(bot_id: str, months: int, trial: bool = False):
     async with aiosqlite.connect(DB_FILE) as db:
-        await db.execute('''
-            INSERT OR REPLACE INTO subscriptions
-            (bot_id, bot_token, admin_ids, start_date, end_date, active)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (bot_id, bot_token, ",".join(map(str, admin_ids)), now.isoformat(), end_date.isoformat(), 1))
+        start_date = datetime.utcnow()
+        if trial:
+            end_date = start_date + timedelta(days=7)
+        else:
+            end_date = start_date + timedelta(days=30 * months)
+        await db.execute(
+            "INSERT OR REPLACE INTO subscriptions (bot_id, start_date, end_date) VALUES (?, ?, ?)",
+            (bot_id, start_date.isoformat(), end_date.isoformat())
+        )
         await db.commit()
 
 async def get_all_subscriptions():

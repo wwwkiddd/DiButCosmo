@@ -1,26 +1,52 @@
+import asyncio
+import importlib.util
 import os
 import shutil
-from uuid import uuid4
-from pathlib import Path
-from dotenv import set_key
+import subprocess
+import uuid
+import logging
 
-from app.backend.models import BotRequest
+from aiogram import Bot
+from aiogram.exceptions import TelegramAPIError
+from app.shared.subscription_db import set_subscription
 
-BOTS_DIR = os.getenv("BOTS_DIR", "app/bots_storage")
-TEMPLATE_PATH = os.getenv("TEMPLATE_BOT_DIR", "app/template_bot")
+TEMPLATE_PATH = "app/template_bot"
+BOTS_ROOT = "bots"
 
-async def create_bot_instance(bot_data: BotRequest) -> str:
-    bot_id = str(uuid4())[:8]
-    bot_path = Path(f"{BOTS_DIR}/{bot_id}")
+async def create_bot_instance(bot_data):
+    bot_token = bot_data.bot_token
+    admin_id = bot_data.admin_id
+    bot_id = str(uuid.uuid4())[:8]
 
-    shutil.copytree(TEMPLATE_PATH, bot_path)
-    env_path = bot_path / ".env"
-    shutil.copy(bot_path / ".env.template", env_path)
+    # Проверка токена
+    try:
+        bot = Bot(token=bot_token)
+        me = await bot.get_me()
+        username = me.username
+    except TelegramAPIError as e:
+        raise Exception("Невалидный токен: " + str(e))
 
-    set_key(str(env_path), "BOT_TOKEN", bot_data.bot_token)
-    set_key(str(env_path), "ADMIN_IDS", str(bot_data.admin_id))
+    # Создание директории
+    bot_dir = os.path.join(BOTS_ROOT, bot_id)
+    os.makedirs(bot_dir, exist_ok=True)
+    shutil.copytree(TEMPLATE_PATH, os.path.join(bot_dir, "app"))
 
-    os.system(f"docker build -t bot_{bot_id} {bot_path}")
-    os.system(f"docker run -d --env-file {env_path} --name bot_{bot_id} bot_{bot_id}")
+    # Создание .env
+    with open(os.path.join(bot_dir, ".env"), "w") as f:
+        f.write(f"BOT_TOKEN={bot_token}\n")
+        f.write(f"ADMIN_ID={admin_id}\n")
+        f.write(f"BOT_ID={bot_id}\n")
 
-    return bot_id
+    # Запуск бота (асинхронный)
+    script_path = os.path.join(bot_dir, "app", "main.py")
+    subprocess.Popen(
+        ["python3", script_path],
+        cwd=bot_dir,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+    # Активируем пробный период
+    await set_subscription(bot_id=bot_id, months=1, trial=True)
+
+    return {"bot_id": bot_id, "username": username}
