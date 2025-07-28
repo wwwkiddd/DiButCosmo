@@ -12,6 +12,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 from aiogram.enums import ParseMode
 from dotenv import load_dotenv
+from aiogram.client.default import DefaultBotProperties
 import json
 
 load_dotenv()
@@ -26,15 +27,28 @@ REVIEWS_CHAT_LINK = os.getenv('REVIEWS_CHAT_LINK', '')
 DB_PATH = os.getenv('DB_PATH', 'bot_database.db')
 CONFIG_PATH = os.getenv('CONFIG_PATH', 'config.json')
 
-bot = Bot(token=BOT_TOKEN, parse_mode=ParseMode.HTML)
+bot = Bot(
+    token=BOT_TOKEN,
+    default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 
 class Form(StatesGroup):
+    language = State()
+    name = State()
+    phone = State()
+    gender = State()
+    birth_date = State()
+    slot = State()
+    anamnesis = State()
+
+    # настройки
     service_config = State()
     faq_config = State()
     reviews_config = State()
     edit_day = State()
+
 
 class AdminForm(StatesGroup):
     add_slots = State()
@@ -180,8 +194,9 @@ async def show_main_menu(user_id: int, language: str):
     ] if language == "ru" else [
         "Make an appointment", "Reviews", "FAQ", "Shop", "Recommend"
     ]
-    for btn in buttons:
-        builder.button(text=btn)
+    builder.add(*[types.KeyboardButton(text=btn) for btn in buttons])
+    markup = builder.adjust(2).as_markup(resize_keyboard=True)
+
     markup = builder.as_markup(resize_keyboard=True)
     await bot.send_message(user_id, "Выберите действие:" if language == "ru" else "Choose an option:",
                            reply_markup=markup)
@@ -189,10 +204,48 @@ async def show_main_menu(user_id: int, language: str):
 
 async def show_admin_menu(user_id: int):
     builder = ReplyKeyboardBuilder()
-    builder.button(text="Добавить свободные окна")
-    builder.button(text="Список записей")
+    buttons = [
+        "Добавить свободные окна",
+        "Список записей",
+        "Настроить расписание",
+        "Сгенерировать расписание",
+        "Добавить свободное окно",
+        "Настроить услуги",
+        "Настроить FAQ",
+        "Настроить отзывы"
+    ]
+
+    builder.add(*[types.KeyboardButton(text=btn) for btn in buttons])
+    markup = builder.adjust(2).as_markup(resize_keyboard=True)
+
     markup = builder.as_markup(resize_keyboard=True)
     await bot.send_message(user_id, "Админ-панель:", reply_markup=markup)
+
+from datetime import datetime, timedelta
+
+async def generate_slots_from_schedule():
+    config = load_config()
+    schedule = config.get("schedule", {})
+    now = datetime.now()
+
+    for i in range(30):  # на 30 дней вперёд
+        date = now + timedelta(days=i)
+        weekday = date.strftime("%A").lower()  # monday, tuesday, ...
+        times = schedule.get(weekday, [])
+        for t in times:
+            try:
+                hour, minute = map(int, t.split(":"))
+                slot_time = date.replace(hour=hour, minute=minute, second=0, microsecond=0)
+                # Добавим в базу, если такого ещё нет
+                cursor = await db.conn.execute("SELECT 1 FROM slots WHERE datetime = ?", (slot_time.strftime("%d.%m.%Y %H:%M"),))
+                if not await cursor.fetchone():
+                    await db.conn.execute(
+                        "INSERT INTO slots (datetime, available) VALUES (?, ?)",
+                        (slot_time.strftime("%d.%m.%Y %H:%M"), 1)
+                    )
+            except Exception as e:
+                logger.error(f"Ошибка генерации слота: {e}")
+    await db.conn.commit()
 
 
 @dp.message(F.text.startswith("/start"))
@@ -408,33 +461,6 @@ async def admin_confirm(callback: types.CallbackQuery):
         await callback.message.answer("Ошибка при подтверждении.")
         logging.exception(e)
 
-
-@dp.message()
-async def receive_payment_info(message: types.Message):
-    if message.from_user.id in ADMIN_IDS:
-        pending_payments = await db.get_all_pending_payments()
-        for user_id, slot_time, service in pending_payments:
-            text = f"""
-        ✅ Ваша запись подтверждена!
-
-        🧴 Услуга: {service}
-        🕒 Дата и время: {slot_time}
-
-        💰 Предоплата: {message.text}
-
-        Пожалуйста, подтвердите оплату:
-        """
-            await bot.send_message(
-                user_id,
-                text,
-                reply_markup=InlineKeyboardBuilder()
-                .button(text="✅ Оплатил", callback_data=f"paid_{user_id}")
-                .button(text="❌ Отменить", callback_data=f"decline_{user_id}")
-                .as_markup()
-            )
-            await db.delete_pending_payment(user_id)
-
-
 @dp.callback_query(F.data.startswith(("paid_", "decline_")))
 async def payment_response(callback: types.CallbackQuery):
     action, user_id = callback.data.split("_", 1)
@@ -450,18 +476,45 @@ async def payment_response(callback: types.CallbackQuery):
         for admin_id in ADMIN_IDS:
             await bot.send_message(admin_id, f"⚠️ Пользователь {user['name']} отменил запись.")
 
+@dp.message(F.text == "Добавить свободное окно")
+async def ask_manual_slot(message: types.Message, state: FSMContext):
+    if message.from_user.id not in ADMIN_IDS:
+        return
+    await state.set_state(AdminForm.add_slots)
+    await message.answer("Введите дату и время в формате ДД.ММ.ГГГГ ЧЧ:ММ (например, 01.08.2025 14:00):")
+
+@dp.message(AdminForm.add_slots)
+async def save_manual_slot(message: types.Message, state: FSMContext):
+    try:
+        dt = datetime.strptime(message.text.strip(), "%d.%m.%Y %H:%M")
+        await db.conn.execute("INSERT INTO slots (datetime, available) VALUES (?, ?)", (dt.strftime("%d.%m.%Y %H:%M"), 1))
+        await db.conn.commit()
+        await message.answer("✅ Окно добавлено.")
+    except ValueError:
+        await message.answer("❌ Неверный формат. Попробуйте снова.")
+    finally:
+        await state.clear()
+
+@dp.message(F.text == "Сгенерировать расписание")
+async def generate_schedule(message: types.Message):
+    if message.from_user.id not in ADMIN_IDS:
+        return
+    await generate_slots_from_schedule()
+    await message.answer("✅ Свободные окна по расписанию добавлены.")
 
 @dp.message(F.text == "Настроить расписание")
 async def configure_schedule(message: types.Message):
     if message.from_user.id not in ADMIN_IDS:
         return
+
     days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
-    buttons = [InlineKeyboardBuilder().button(text=day.capitalize(), callback_data=f"edit_day_{day}") for day in days]
-    kb = InlineKeyboardBuilder()
-    for b in buttons:
-        kb.button(text=b.button.text, callback_data=b.button.callback_data)
-    kb.adjust(2)
-    await message.answer("Выберите день недели:", reply_markup=kb.as_markup())
+    builder = InlineKeyboardBuilder()
+    for day in days:
+        builder.button(text=day.capitalize(), callback_data=f"edit_day_{day}")
+    builder.adjust(2)
+
+    await message.answer("Выберите день недели:", reply_markup=builder.as_markup())
+
 
 @dp.callback_query(F.data.startswith("edit_day_"))
 async def ask_day_slots(callback: types.CallbackQuery, state: FSMContext):
@@ -529,20 +582,18 @@ async def save_reviews(message: types.Message, state: FSMContext):
     await message.answer(f"✅ Ссылка сохранена: {url}")
     await state.clear()
 
-
-
-
 @dp.message(F.text == "Список записей")
 async def handle_list_appointments(message: types.Message):
     if message.from_user.id not in ADMIN_IDS:
         return
-        cursor = await db.conn.execute("SELECT datetime FROM slots WHERE available = 0 ORDER BY datetime")
-        rows = await cursor.fetchall()
-        if not rows:
-            await message.answer("Нет занятых слотов.")
-        else:
-            text = "Занятые слоты:\n" + "\n".join([row[0] for row in rows])
-            await message.answer(text)
+
+    cursor = await db.conn.execute("SELECT datetime FROM slots WHERE available = 0 ORDER BY datetime")
+    rows = await cursor.fetchall()
+    if not rows:
+        await message.answer("Нет занятых слотов.")
+    else:
+        text = "Занятые слоты:\n" + "\n".join([row[0] for row in rows])
+        await message.answer(text)
 
 
 async def on_startup():
@@ -554,6 +605,30 @@ async def on_startup():
         await db.add_slots(default_slots)
         logger.info("Добавлены тестовые окна по умолчанию")
 
+@dp.message()
+async def receive_payment_info(message: types.Message):
+    if message.from_user.id in ADMIN_IDS:
+        pending_payments = await db.get_all_pending_payments()
+        for user_id, slot_time, service in pending_payments:
+            text = f"""
+        ✅ Ваша запись подтверждена!
+
+        🧴 Услуга: {service}
+        🕒 Дата и время: {slot_time}
+
+        💰 Предоплата: {message.text}
+
+        Пожалуйста, подтвердите оплату:
+        """
+            await bot.send_message(
+                user_id,
+                text,
+                reply_markup=InlineKeyboardBuilder()
+                .button(text="✅ Оплатил", callback_data=f"paid_{user_id}")
+                .button(text="❌ Отменить", callback_data=f"decline_{user_id}")
+                .as_markup()
+            )
+            await db.delete_pending_payment(user_id)
 
 async def on_shutdown():
     await db.close()

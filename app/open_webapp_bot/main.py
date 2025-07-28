@@ -9,7 +9,6 @@ from dotenv import load_dotenv
 from app.shared.yookassa_api import create_payment_link
 from app.shared.subscription_db import set_subscription
 
-
 load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -54,7 +53,8 @@ async def handle_payment(callback: types.CallbackQuery):
         12: 3000
     }[months]
 
-    url = create_payment_link(price, user_id, bot_id)
+    # ✅ Передаём months как последний аргумент
+    url = create_payment_link(price, user_id, bot_id, months)
     await callback.message.answer(f"💳 Перейдите для оплаты:\n{url}")
 
 @dp.callback_query(F.data == "shop")
@@ -62,11 +62,11 @@ async def show_shop(callback: types.CallbackQuery):
     await callback.message.answer("🛒 Магазин скоро будет доступен!")
 
 async def main():
-    print("Бот запускается...")  # Добавьте это для отладки
+    print("Бот запускается...")
     try:
         await dp.start_polling(bot)
     except KeyboardInterrupt:
-        print("Бот остановлен")  # Сообщение о корректном завершении
+        print("Бот остановлен")
 
 if __name__ == "__main__":
     asyncio.run(main())
