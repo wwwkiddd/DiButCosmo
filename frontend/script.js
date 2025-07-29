@@ -1,30 +1,26 @@
 document.getElementById("bot-form").addEventListener("submit", async (e) => {
-  e.preventDefault();
+    e.preventDefault();
+    const botToken = document.getElementById("bot_token").value;
+    const adminId = document.getElementById("admin_id").value;
 
-  const botToken = document.getElementById("bot_token").value;
-  const adminId = document.getElementById("admin_id").value;
-  const result = document.getElementById("result");
+    try {
+        const response = await fetch("https://dibutcosmo.ru/create_bot/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ bot_token: botToken, admin_id: adminId })
+        });
 
-  result.textContent = "Создание бота...";
-
-  try {
-    const response = await fetch("https://dibutcosmo.ru/create_bot/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        bot_token: botToken,
-        admin_id: parseInt(adminId),
-      })
-    });
-
-    const data = await response.json();
-
-    if (response.ok) {
-      result.textContent = `✅ Бот создан! Вот ссылка: https://t.me/${data.username}`;
-    } else {
-      result.textContent = `❌ Ошибка: ${data.detail}`;
+        const result = await response.json();
+        if (result.status === "ok") {
+            const username = result.username || "your_bot";
+            document.getElementById("result").innerHTML = `✅ Бот создан! Вот ссылка: <a href="https://t.me/${username}" target="_blank">https://t.me/${username}</a>`;
+        } else {
+            document.getElementById("result").innerText = "❌ Ошибка создания бота.";
+        }
+    } catch (error) {
+        document.getElementById("result").innerText = "❌ Ошибка подключения к серверу.";
+        console.error(error);
     }
-  } catch (err) {
-    result.textContent = "❌ Не удалось подключиться к серверу.";
-  }
 });

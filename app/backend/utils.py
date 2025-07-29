@@ -31,17 +31,18 @@ async def create_bot_instance(bot_data):
     os.makedirs(bot_dir, exist_ok=True)
     shutil.copytree(TEMPLATE_PATH, os.path.join(bot_dir, "app"))
 
-    # Создание .env
-    with open(os.path.join(bot_dir, ".env"), "w") as f:
+    # Создание .env внутри app/
+    env_path = os.path.join(bot_dir, "app", ".env")
+    with open(env_path, "w") as f:
         f.write(f"BOT_TOKEN={bot_token}\n")
-        f.write(f"ADMIN_ID={admin_id}\n")
+        f.write(f"ADMIN_IDS={admin_id}\n")
         f.write(f"BOT_ID={bot_id}\n")
 
-    # Запуск бота (асинхронный)
+    # Запуск бота
     script_path = os.path.join(bot_dir, "app", "main.py")
     subprocess.Popen(
         ["python3", script_path],
-        cwd=bot_dir,
+        cwd=os.path.join(bot_dir, "app"),
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
@@ -49,7 +50,4 @@ async def create_bot_instance(bot_data):
     # Активируем пробный период
     await set_subscription(bot_id=bot_id, months=1, trial=True)
 
-    return {
-        "bot_id": bot_id,
-        "username": username
-    }
+    return {"bot_id": bot_id, "username": username}
