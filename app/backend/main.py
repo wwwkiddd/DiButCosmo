@@ -27,7 +27,8 @@ async def startup_event():
 @app.post("/create_bot/")
 async def create_bot(bot_data: BotRequest):
     try:
-        bot_id = await create_bot_instance(bot_data)
-        return {"status": "ok", "bot_id": bot_id}
+        username = await create_bot_instance(bot_data)
+        return {"status": "ok", "bot_username": username}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+

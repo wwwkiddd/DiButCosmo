@@ -49,4 +49,7 @@ async def create_bot_instance(bot_data):
     # Активируем пробный период
     await set_subscription(bot_id=bot_id, months=1, trial=True)
 
-    return {"bot_id": bot_id, "username": username}
+    return {
+        "bot_id": bot_id,
+        "username": username
+    }

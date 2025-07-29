@@ -14,13 +14,13 @@ document.getElementById("bot-form").addEventListener("submit", async (e) => {
       body: JSON.stringify({
         bot_token: botToken,
         admin_id: parseInt(adminId),
-      }),
+      })
     });
 
     const data = await response.json();
 
     if (response.ok) {
-      result.textContent = `✅ Бот создан! Вот ссылка: https://t.me/${data.bot_username}`;
+      result.textContent = `✅ Бот создан! Вот ссылка: https://t.me/${data.username}`;
     } else {
       result.textContent = `❌ Ошибка: ${data.detail}`;
     }
