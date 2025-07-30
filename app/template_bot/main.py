@@ -199,14 +199,13 @@ async def show_main_menu(user_id: int, language: str):
     markup = builder.adjust(2).as_markup(resize_keyboard=True)
 
     markup = builder.as_markup(resize_keyboard=True)
-    await bot.send_message(user_id, "Выберите действие:" if language == "ru" else "Choose an option:",
+    await bot.send_message(user_id, "Здесь можно записаться к мастеру всего в пару кликов!✌️\nЧто вы можете сделать в этом боте:\n\n📝 Записаться на услугу — выберите нужную услугу, дату и время, и оставьте заявку\n💬 Отзывы — почитайте, что пишут другие клиенты, или оставьте свой отзыв\n❓ FAQ — получите ответы на самые популярные вопросы\n🛍 Магазин — посмотрите доступные товары и специальные предложения\n🤝 Порекомендовать — поделитесь ботом с друзьями и получите бонус\n🔔 Напоминания — получайте напоминания о своих записях" if language == "ru" else "Choose an option:",
                            reply_markup=markup)
 
 
 async def show_admin_menu(user_id: int):
     builder = ReplyKeyboardBuilder()
     buttons = [
-        "Добавить свободные окна",
         "Список записей",
         "Настроить расписание",
         "Сгенерировать расписание",
@@ -220,7 +219,7 @@ async def show_admin_menu(user_id: int):
     markup = builder.adjust(2).as_markup(resize_keyboard=True)
 
     markup = builder.as_markup(resize_keyboard=True)
-    await bot.send_message(user_id, "Админ-панель:", reply_markup=markup)
+    await bot.send_message(user_id, "Добро пожаловать в админ-панель вашего бота!\nЗдесь вы управляете всеми настройками и заявками 🛠\n\nЧто вы можете сделать:\n📋 Список записей — просматривайте все текущие заявки клиентов\n🗓 Настроить расписание — выберите дни и время для постоянной работы\n⚡ Сгенерировать расписание — бот автоматически создаст свободные окна на ближайшие 30 дней согласно вашему графику\n➕ Добавить свободное окно — вручную добавьте отдельные слоты для записи\n💇‍♂️ Настроить услуги — перечислите услуги, которые вы предлагаете\n❓ Настроить FAQ — добавьте ответы на частые вопросы клиентов\n💬 Настроить отзывы — укажите ссылку на чат с вашими отзывами\n\nИспользуйте кнопки ниже для управления вашим ботом и повышения качества сервиса для клиентов!🚀\n\nКак только бот будет настроен, делитесь ссылкой и записывайте ваших первых клиентов! ✨", reply_markup=markup)
 
 from datetime import datetime, timedelta
 
@@ -266,7 +265,7 @@ async def cmd_start(message: types.Message, state: FSMContext):
         else:
             await db.add_user(user_id, language="ru")
             await state.set_state(Form.language)
-            await message.answer("Выберите язык / Choose language:", reply_markup=await language_keyboard())
+            await message.answer("Добрый день! Вы попали в бота для записи на услуги!📋\nПожалуйста, пройдите регистрацию, чтобы мастер мог с вами связаться📞/Hi! You have reached the bot for recording a service!\n📋Please register so that the master can contact you📞\n\nВыберите язык / Choose language:", reply_markup=await language_keyboard())
 
     except Exception as e:
         logger.error(f"Error in cmd_start: {e}")
@@ -278,7 +277,7 @@ async def process_language(callback: types.CallbackQuery, state: FSMContext):
     lang = callback.data.split("_")[1]
     await db.update_user(callback.from_user.id, language=lang)
     await state.set_state(Form.name)
-    await callback.message.answer("Введите ваше имя:" if lang == "ru" else "Enter your name:")
+    await callback.message.answer("Введите ваше имя:💁‍♂️" if lang == "ru" else "Enter your name:💁‍♂️")
 
 
 @dp.message(Form.name)
@@ -286,7 +285,7 @@ async def process_name(message: types.Message, state: FSMContext):
     await db.update_user(message.from_user.id, name=message.text)
     user = await db.get_user(message.from_user.id)
     await state.set_state(Form.phone)
-    await message.answer("Введите ваш номер телефона:" if user['language'] == "ru" else "Enter your phone number:")
+    await message.answer("Введите ваш номер телефона:☎️" if user['language'] == "ru" else "Enter your phone number:☎️")
 
 
 @dp.message(Form.phone)
@@ -294,7 +293,7 @@ async def process_phone(message: types.Message, state: FSMContext):
     await db.update_user(message.from_user.id, phone=message.text)
     user = await db.get_user(message.from_user.id)
     await state.set_state(Form.gender)
-    await message.answer("Ваш пол (м/ж):" if user['language'] == "ru" else "Your gender (m/f):")
+    await message.answer("Ваш пол (м/ж):💟" if user['language'] == "ru" else "Your gender (m/f):💟")
 
 
 @dp.message(Form.gender)
@@ -302,7 +301,7 @@ async def process_gender(message: types.Message, state: FSMContext):
     await db.update_user(message.from_user.id, gender=message.text)
     user = await db.get_user(message.from_user.id)
     await state.set_state(Form.birth_date)
-    await message.answer("Дата рождения (ДД.ММ.ГГГГ):" if user['language'] == "ru" else "Birth date (DD.MM.YYYY):")
+    await message.answer("Дата рождения (ДД.ММ.ГГГГ):📅" if user['language'] == "ru" else "Birth date (DD.MM.YYYY):📅")
 
 
 @dp.message(Form.birth_date)
@@ -315,13 +314,13 @@ async def process_birth_date(message: types.Message, state: FSMContext):
             registered=1
         )
         user = await db.get_user(message.from_user.id)
-        await message.answer("Регистрация завершена!" if user['language'] == "ru" else "Registration complete!")
+        await message.answer("Регистрация завершена!✅" if user['language'] == "ru" else "Registration complete!✅")
         await state.clear()
         await show_main_menu(message.from_user.id, user['language'])
     except ValueError:
         user = await db.get_user(message.from_user.id)
-        await message.answer("Неверный формат даты. Попробуйте снова." if user[
-                                                                              'language'] == "ru" else "Invalid date format. Try again.")
+        await message.answer("Неверный формат даты. Попробуйте снова.🔄" if user[
+                                                                              'language'] == "ru" else "Invalid date format. Try again.🔄")
 
 
 @dp.message(F.text.in_(["Магазин", "Shop"]))
