@@ -395,7 +395,7 @@ async def choose_slot(callback: types.CallbackQuery, state: FSMContext):
     lang = user['language'] if user else 'ru'
 
     await callback.message.answer(
-        "Введите ваш анамнез (аллергии, кожные проблемы и т.д.):"
+        "Введите дополнительную информацию для мастера, если она есть:"
         if lang == 'ru' else
         "Enter your medical history (allergies, skin problems, etc.):"
     )
@@ -507,7 +507,7 @@ async def configure_schedule(message: types.Message):
     if message.from_user.id not in ADMIN_IDS:
         return
 
-    days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    days = ["Пн/Mon", "Вт/Tue", "Ср/Wed", "Чт/Thu", "Пт/Fri", "Сб/Sat", "Вс/Sun"]
     builder = InlineKeyboardBuilder()
     for day in days:
         builder.button(text=day.capitalize(), callback_data=f"edit_day_{day}")
@@ -599,11 +599,7 @@ async def handle_list_appointments(message: types.Message):
 async def on_startup():
     await db.connect()
     logger.info("Бот запущен и подключен к базе данных")
-    default_slots = ["21.05 12:00", "21.05 15:00", "22.05 18:30"]
-    existing = await db.get_available_slots()
-    if not existing:
-        await db.add_slots(default_slots)
-        logger.info("Добавлены тестовые окна по умолчанию")
+
 
 @dp.message()
 async def receive_payment_info(message: types.Message):
