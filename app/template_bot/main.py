@@ -507,7 +507,7 @@ async def configure_schedule(message: types.Message):
     if message.from_user.id not in ADMIN_IDS:
         return
 
-    days = ["Пн/Mon", "Вт/Tue", "Ср/Wed", "Чт/Thu", "Пт/Fri", "Сб/Sat", "Вс/Sun"]
+    days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
     builder = InlineKeyboardBuilder()
     for day in days:
         builder.button(text=day.capitalize(), callback_data=f"edit_day_{day}")
