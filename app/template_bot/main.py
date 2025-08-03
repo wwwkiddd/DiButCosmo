@@ -599,6 +599,11 @@ async def handle_list_appointments(message: types.Message):
 async def on_startup():
     await db.connect()
     logger.info("Бот запущен и подключен к базе данных")
+    default_slots = []
+    existing = await db.get_available_slots()
+    if not existing:
+        await db.add_slots(default_slots)
+        logger.info("Добавлены тестовые окна по умолчанию")
 
 
 @dp.message()
