@@ -32,3 +32,20 @@ async def create_bot(bot_data: BotRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+from fastapi import Request
+from app.shared.subscription_db import prolong_subscription
+
+@app.post("/yookassa/webhook/")
+async def yookassa_webhook(request: Request):
+    data = await request.json()
+    try:
+        event = data.get("event")
+        if event == "payment.succeeded":
+            metadata = data["object"]["metadata"]
+            bot_id = metadata.get("bot_id")
+            months = int(metadata.get("months", 1))
+            await prolong_subscription(bot_id, months)
+            return {"status": "ok"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+

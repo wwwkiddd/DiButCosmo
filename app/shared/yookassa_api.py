@@ -41,18 +41,72 @@ from datetime import timedelta
 
 router = APIRouter()
 
-@router.post("/yookassa/webhook")
+from fastapi import FastAPI, HTTPException, Request
+from app.shared.subscription_db import upsert_subscription, get_subscription_by_id
+from app.backend.utils import start_bot, restart_bot
+
+app = FastAPI()
+
+@app.post("/yookassa/webhook")
 async def yookassa_webhook(request: Request):
-    body = await request.body()
-    notification = WebhookNotificationFactory().create(body, request.headers["Content-Type"])
+    """
+    Ожидаем JSON вида:
+    {
+      "event": "payment.succeeded",
+      "object": {
+         "id": "...",
+         "status": "succeeded",
+         "metadata": {
+             "bot_id": "abcd1234",
+             "months": 3
+         }
+      }
+    }
+    """
+    payload = await request.json()
+    try:
+        event = payload.get("event")
+        obj = payload.get("object", {})
+        meta = obj.get("metadata", {}) or {}
 
-    if notification.event == WebhookNotificationEventType.PAYMENT_SUCCEEDED:
-        payment = notification.object
-        metadata = payment.metadata
-        user_id = metadata.get("user_id")
-        months = int(metadata.get("months", 1))
-        bot_id = metadata.get("bot_id")
+        if event != "payment.succeeded":
+            return {"status": "ignored"}
 
-        await prolong_subscription(user_id, bot_id, timedelta(days=30 * months))
+        bot_id = meta.get("bot_id")
+        months = int(meta.get("months", 1))
 
-    return {"status": "ok"}
+        if not bot_id:
+            raise HTTPException(status_code=400, detail="metadata.bot_id is required")
+
+        # Берём существующую подписку чтобы знать token/admins
+        sub = await get_subscription_by_id(bot_id)
+        if not sub:
+            raise HTTPException(status_code=404, detail="subscription not found for bot_id")
+
+        bot_token = sub["bot_token"]
+        admin_ids = sub["admin_ids"]
+
+        # Продлеваем (active=1, warn_* сбрасываются)
+        await upsert_subscription(
+            bot_id=bot_id,
+            bot_token=bot_token,
+            admin_ids=admin_ids,
+            months=months,
+            trial=False
+        )
+
+        # Включим (или перезапустим) бота на всякий случай
+        try:
+            start_bot(bot_id)      # если был остановлен
+        except Exception:
+            pass
+        try:
+            restart_bot(bot_id)    # если уже работал — применим свежую .env/логику
+        except Exception:
+            pass
+
+        return {"status": "ok"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
