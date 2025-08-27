@@ -34,13 +34,6 @@ def create_payment_link(amount: int, user_id: int, bot_id: str, months: int) -> 
     })
     return payment.confirmation.confirmation_url
 
-from fastapi import APIRouter, Request
-from yookassa.domain.notification import WebhookNotificationEventType, WebhookNotificationFactory
-from app.shared.subscription_db import prolong_subscription  # нужно реализовать
-from datetime import timedelta
-
-router = APIRouter()
-
 from fastapi import FastAPI, HTTPException, Request
 from app.shared.subscription_db import upsert_subscription, get_subscription_by_id
 from app.backend.utils import start_bot, restart_bot
