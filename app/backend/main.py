@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.backend.models import BotRequest
 from app.backend.utils import create_bot_instance
-from app.shared.subscription_db import get_expired_bots, init_db
+from app.shared.subscription_db import init_db
 
 load_dotenv()
 

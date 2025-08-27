@@ -160,3 +160,16 @@ async def get_subscription_by_id(bot_id: str):
                 "warn_12h": bool(row[6]),
                 "warn_6h":  bool(row[7]),
             }
+
+async def prolong_subscription(bot_id: str, months: int):
+    """Продлить существующую подписку на указанное количество месяцев."""
+    sub = await get_subscription_by_id(bot_id)
+    if not sub:
+        return
+    await upsert_subscription(
+        bot_id=bot_id,
+        bot_token=sub["bot_token"],
+        admin_ids=sub["admin_ids"],
+        months=months,
+        trial=False,
+    )
