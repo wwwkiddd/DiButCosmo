@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 from app.shared.yookassa_api import create_payment_link
 
-# from app.open_webapp_bot.AI.AI_func import ai_func
+from app.open_webapp_bot.AI.AI_func import ai_func
 
 
 load_dotenv()
@@ -20,7 +20,7 @@ WEBAPP_URL = os.getenv("WEBAPP_URL")
 bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher(storage=MemoryStorage())
 
-# dp.include_router(ai_func)
+dp.include_router(ai_func)
 
 @dp.message(F.text.lower() == "/start")
 async def start(message: types.Message):
