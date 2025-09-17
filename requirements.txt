@@ -5,3 +5,4 @@ pydantic
 aiofiles
 aiogram
 aiosqlite
+yookassa
