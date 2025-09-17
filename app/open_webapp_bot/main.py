@@ -6,7 +6,11 @@ from aiogram.fsm.storage.memory import MemoryStorage
 import asyncio
 import os
 from dotenv import load_dotenv
+
 from app.shared.yookassa_api import create_payment_link
+
+# from app.open_webapp_bot.AI.AI_func import ai_func
+
 
 load_dotenv()
 
@@ -16,13 +20,16 @@ WEBAPP_URL = os.getenv("WEBAPP_URL")
 bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher(storage=MemoryStorage())
 
+# dp.include_router(ai_func)
+
 @dp.message(F.text.lower() == "/start")
 async def start(message: types.Message):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🚀 Создать бота", web_app=WebAppInfo(url=WEBAPP_URL))],
         [InlineKeyboardButton(text="💰 Оплатить подписку", callback_data="pay")],
         [InlineKeyboardButton(text="🛒 Магазин", callback_data="shop")],
-        [InlineKeyboardButton(text="🛠 Техподдержка", url="https://t.me/nikita_support")]
+        [InlineKeyboardButton(text="🛠 Техподдержка", url="https://t.me/nikita_support")],
+        [InlineKeyboardButton(text="🧠 Нейросети", callback_data='ai')]
     ])
     await message.answer("👋 Добро пожаловать! С этим ботом вы сможете по простой инструкции в мини-приложении создать собственного Telegram-бота для записи на услуги — без программирования и лишних хлопот.\n\nПервые 7 дней вы сможете бесплатно опробовать все возможности своего бота, а далее — пользоваться им по демократичной подписке!\n\nНажмите «🚀 Создать бота», чтобы начать!", reply_markup=keyboard)
 
@@ -34,6 +41,7 @@ async def show_payment_options(callback: types.CallbackQuery):
         [InlineKeyboardButton(text="12 месяцев — 3000 ₽", callback_data="pay_12")]
     ])
     await callback.message.answer("Выберите срок подписки:", reply_markup=keyboard)
+    await callback.answer()
 
 @dp.callback_query(F.data.in_({"pay_1", "pay_3", "pay_12"}))
 async def handle_payment(callback: types.CallbackQuery):
@@ -55,10 +63,14 @@ async def handle_payment(callback: types.CallbackQuery):
     # ✅ Передаём months как последний аргумент
     url = create_payment_link(price, user_id, bot_id, months)
     await callback.message.answer(f"💳 Перейдите для оплаты:\n{url}")
+    await callback.answer()
 
 @dp.callback_query(F.data == "shop")
 async def show_shop(callback: types.CallbackQuery):
     await callback.message.answer("🛒 Магазин скоро будет доступен!")
+    await callback.answer()
+
+
 
 async def main():
     print("Бот запускается...")
