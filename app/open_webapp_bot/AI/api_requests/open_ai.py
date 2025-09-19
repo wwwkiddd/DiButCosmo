@@ -11,7 +11,7 @@ API = os.getenv('API_GPT')
 
 
 client = OpenAI(
-  base_url="https://api.proxyapi.ru/openrouter/v1",
+  base_url="https://openrouter.ai/api/v1",
   api_key=API,
 )
 
@@ -59,7 +59,7 @@ async def gpt_5(session: AsyncSession, user_id: int, prompt: str = None, image =
         # )
 
         response = client.chat.completions.create(
-            model="openai/gpt-5-chat",
+            model="openai/gpt-5",
             messages=[
                 {
                     "role": "user",
