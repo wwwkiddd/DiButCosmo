@@ -24,7 +24,7 @@ async def gpt_5(session: AsyncSession, user_id: int, prompt: str = None, image =
         await orm_update_gpt_chat_history(session, [{
             "role": "user",
             "content": [
-                {"type": "input_text", "text": prompt},
+                {"type": "text", "text": prompt},
                 {
                     "type": "input_image",
                     "image_url": f"data:image/jpeg;base64,{b64_image}"
@@ -52,33 +52,11 @@ async def gpt_5(session: AsyncSession, user_id: int, prompt: str = None, image =
     try:
         history = await orm_get_chat_history(session, user_id, 'gpt')
 
-        # response = await asyncio.to_thread(
-        #     client.responses.create,
-        #     model="gpt-5",
-        #     input=history  # список словарей с role и content
-        # )
-
-        response = client.chat.completions.create(
+        response = await asyncio.to_thread(
+            client.chat.completions.create,
             model="openai/gpt-5",
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": prompt
-                        },
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg"
-                            }
-                        }
-                    ]
-                }
-            ]
+            messages=history
         )
-
 
         print(response)
         ans = response.choices[0].message.content
