@@ -59,11 +59,6 @@ async def gpt_5(session: AsyncSession, user_id: int, prompt: str | None = None, 
         # )
 
         response = client.chat.completions.create(
-            extra_headers={
-                "HTTP-Referer": "<YOUR_SITE_URL>",  # Optional. Site URL for rankings on openrouter.ai.
-                "X-Title": "<YOUR_SITE_NAME>",  # Optional. Site title for rankings on openrouter.ai.
-            },
-            extra_body={},
             model="openai/gpt-5-chat",
             messages=[
                 {
@@ -71,7 +66,7 @@ async def gpt_5(session: AsyncSession, user_id: int, prompt: str | None = None, 
                     "content": [
                         {
                             "type": "text",
-                            "text": "What is in this image?"
+                            "text": prompt
                         },
                         {
                             "type": "image_url",
@@ -84,8 +79,9 @@ async def gpt_5(session: AsyncSession, user_id: int, prompt: str | None = None, 
             ]
         )
 
-        ans = response.choices[0].message.content
+
         print(response)
+        ans = response.choices[0].message.content
         await orm_update_gpt_chat_history(session, [
             {"role": "assistant", "content": [
                 {"type": "output_text", "text": ans}
