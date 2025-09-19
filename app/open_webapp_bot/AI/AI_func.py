@@ -187,7 +187,7 @@ async def work_with_text(message: types.Message, state: FSMContext):
 async def work_with_gpt_5(message: types.Message, state: FSMContext):
     await message.delete()
 
-    photo = FSInputFile('./files/gpt_5.jpg')
+    photo = FSInputFile('app/open_webapp_bot/AI/files/gpt_5.jpg')
     await message.answer_photo(photo=photo, caption='''❗Последня нейросеть от OpenAI уже в телеграм!!!\n\n🚀
 ✨ 📏 Масштаб — GPT‑5 в разы больше и «умнее»: триллионы параметров против сотен миллиардов у GPT‑4.\n
 🖼 Мультимодальность — понимает не только текст, но и изображения.\n
