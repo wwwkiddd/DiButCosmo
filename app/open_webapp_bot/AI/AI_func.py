@@ -1,7 +1,7 @@
 import asyncio
 import io
 import os
-from gc import callbacks
+
 
 from aiogram import Router, F, types, Bot
 from aiogram.client.session import aiohttp
@@ -66,7 +66,7 @@ async def start_ai(callback: types.CallbackQuery, state: FSMContext, session: As
                 'username': callback.from_user.username
                 }
         await orm_add_user(session, data)
-    elif user.username != callback.chat.username:
+    elif user.username != callback.from_user.username:
         await orm_update_user_name(session, user_id, callback.from_user.username)
     elif user.first_name != callback.from_user.first_name:
         await orm_update_first_name(session, user_id, callback.from_user.first_name)
