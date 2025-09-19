@@ -76,19 +76,27 @@ async def show_shop(callback: types.CallbackQuery):
     await callback.answer()
 
 
+async def on_startup(bot):
+    print("Бот запускается...")
+    await create_db()
+
+
+async def on_shutdown(bot):
+    print('bot has fallen')
+    await http_session.close()
 
 async def main():
-    print("Бот запускается...")
-    try:
-        await create_db()
-        dp.update.middleware(DataBaseSession(session_pool=session_maker))
-        http_client_session = await http_session.create_session()
-        dp.update.middleware(HTTPSessionMiddleware(http_client_session))
-        await dp.start_polling(bot)
 
-    except KeyboardInterrupt:
-        await http_session.close()
-        print("Бот остановлен")
+
+
+    dp.startup.register(on_startup)
+    dp.shutdown.register(on_shutdown)
+
+    dp.update.middleware(DataBaseSession(session_pool=session_maker))
+    http_client_session = await http_session.create_session()
+    dp.update.middleware(HTTPSessionMiddleware(http_client_session))
+    await dp.start_polling(bot)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
