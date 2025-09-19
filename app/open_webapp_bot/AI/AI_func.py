@@ -57,7 +57,7 @@ class AISelected(StatesGroup):
 @ai_func.callback_query(F.data == 'ai')
 async def start_ai(callback: types.CallbackQuery, state: FSMContext, session: AsyncSession):
     user_id = callback.from_user.id
-    user = await orm_get_user(session, callback.message.from_user.id)
+    user = await orm_get_user(session, callback.from_user.id)
     if not user:
         data = {'user_id': user_id,
                 'first_name': callback.from_user.first_name,
