@@ -5,6 +5,9 @@ pydantic
 aiofiles
 aiogram
 aiosqlite
+openai
+yookassa
 yookassa
 sqlalchemy
 openai
+asyncpg
