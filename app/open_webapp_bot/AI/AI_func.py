@@ -56,23 +56,22 @@ class AISelected(StatesGroup):
 #
 @ai_func.callback_query(F.data == 'ai')
 async def start_ai(callback: types.CallbackQuery, state: FSMContext, session: AsyncSession):
-    print(callback)
-    user_id = callback.message.from_user.id
+    user_id = callback.from_user.id
     user = await orm_get_user(session, callback.message.from_user.id)
     if not user:
         data = {'user_id': user_id,
-                'first_name': callback.message.from_user.first_name,
-                'last_name': callback.message.from_user.last_name,
+                'first_name': callback.from_user.first_name,
+                'last_name': callback.from_user.last_name,
                 'tokens': 200,
-                'username': callback.message.from_user.username
+                'username': callback.from_user.username
                 }
         await orm_add_user(session, data)
-    elif user.username != callback.message.chat.username:
-        await orm_update_user_name(session, user_id, callback.message.from_user.username)
-    elif user.first_name != callback.message.from_user.first_name:
-        await orm_update_first_name(session, user_id, callback.message.from_user.first_name)
-    elif user.last_name != callback.message.from_user.last_name:
-        await orm_update_last_name(session, user_id, callback.message.from_user.last_name)
+    elif user.username != callback.chat.username:
+        await orm_update_user_name(session, user_id, callback.from_user.username)
+    elif user.first_name != callback.from_user.first_name:
+        await orm_update_first_name(session, user_id, callback.from_user.first_name)
+    elif user.last_name != callback.from_user.last_name:
+        await orm_update_last_name(session, user_id, callback.from_user.last_name)
 
     await callback.message.answer(
         '<b>✨ Привет, я собрал в себе все популярные нейросети для вашего удобства!</b>\n\n<u>Вот что я умею:</u>\n\n'
