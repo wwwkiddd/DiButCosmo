@@ -3,8 +3,7 @@ from asyncio import Lock
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import update, select, delete
 
-
-from models import User, PromoCode
+from app.open_webapp_bot.AI.database.models import User, PromoCode
 
 
 async def orm_add_user(session: AsyncSession, data: dict):
