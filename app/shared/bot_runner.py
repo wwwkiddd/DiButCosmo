@@ -14,7 +14,7 @@ async def run_bot_instance(bot_id):
     # Загрузить .env
     load_dotenv(dotenv_path=env_path)
 
-    # Запуск main.py
+    # Запуск main.py ?
     main_path = user_bot_path / "main.py"
     spec = importlib.util.spec_from_file_location("main", main_path)
     module = importlib.util.module_from_spec(spec)

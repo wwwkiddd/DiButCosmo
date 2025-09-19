@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import update, select, delete
 
 
-from database.models import User, PromoCode
+from models import User, PromoCode
 
 
 async def orm_add_user(session: AsyncSession, data: dict):

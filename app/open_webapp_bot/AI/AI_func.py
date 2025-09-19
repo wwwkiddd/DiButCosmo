@@ -1,6 +1,7 @@
 import asyncio
 import io
 import os
+from gc import callbacks
 
 from aiogram import Router, F, types, Bot
 from aiogram.client.session import aiohttp
@@ -11,7 +12,8 @@ from aiogram.types import FSInputFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.open_webapp_bot.AI.api_requests.open_ai import gpt_5
-from app.open_webapp_bot.AI.database.orm_query import orm_delete_gpt_chat_history
+from app.open_webapp_bot.AI.database.orm_query import orm_delete_gpt_chat_history, orm_get_user, orm_add_user, \
+    orm_update_user_name, orm_update_first_name, orm_update_last_name
 #
 # from openai import BadRequestError
 #
@@ -53,23 +55,23 @@ class AISelected(StatesGroup):
 #
 #
 @ai_func.callback_query(F.data == 'ai')
-async def start_ai(callback: types.CallbackQuery, state: FSMContext):
-    # user_id = message.from_user.id
-    # user = await orm_get_user(session, message.from_user.id)
-    # if not user:
-    #     data = {'user_id': user_id,
-    #             'first_name': message.from_user.first_name,
-    #             'last_name': message.from_user.last_name,
-    #             'tokens': 200,
-    #             'username': message.from_user.username
-    #             }
-    #     await orm_add_user(session, data)
-    # elif user.username != message.chat.username:
-    #     await orm_update_user_name(session, user_id, message.from_user.username)
-    # elif user.first_name != message.from_user.first_name:
-    #     await orm_update_first_name(session, user_id, message.from_user.first_name)
-    # elif user.last_name != message.from_user.last_name:
-    #     await orm_update_last_name(session, user_id, message.from_user.last_name)
+async def start_ai(callback: types.CallbackQuery, state: FSMContext, session: AsyncSession):
+    user_id = callback.message.from_user.id
+    user = await orm_get_user(session, callback.message.from_user.id)
+    if not user:
+        data = {'user_id': user_id,
+                'first_name': callback.message.from_user.first_name,
+                'last_name': callback.message.from_user.last_name,
+                'tokens': 200,
+                'username': callback.message.from_user.username
+                }
+        await orm_add_user(session, data)
+    elif user.username != callback.message.chat.username:
+        await orm_update_user_name(session, user_id, callback.message.from_user.username)
+    elif user.first_name != callback.message.from_user.first_name:
+        await orm_update_first_name(session, user_id, callback.message.from_user.first_name)
+    elif user.last_name != callback.message.from_user.last_name:
+        await orm_update_last_name(session, user_id, callback.message.from_user.last_name)
 
     await callback.message.answer(
         '<b>✨ Привет, я собрал в себе все популярные нейросети для вашего удобства!</b>\n\n<u>Вот что я умею:</u>\n\n'
@@ -80,6 +82,8 @@ async def start_ai(callback: types.CallbackQuery, state: FSMContext):
         '‍👨‍🍳 Подбирать рецепты по фото продуктов и рассчитывать КБЖУ\n\n'
         '<i>Чтобы узнать больше выберите режим 👇</i>',
         reply_markup=main_kbd)
+    await callback.answer()
+
 
     await state.clear()
 #

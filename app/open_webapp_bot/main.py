@@ -8,7 +8,7 @@ import asyncio
 import os
 from dotenv import load_dotenv
 
-from app.open_webapp_bot.AI.database.engine import session_maker
+from app.open_webapp_bot.AI.database.engine import session_maker, create_db
 from app.open_webapp_bot.AI.middlewares.db import DataBaseSession, HTTPSessionMiddleware
 from app.shared.yookassa_api import create_payment_link
 
@@ -80,6 +80,7 @@ async def show_shop(callback: types.CallbackQuery):
 async def main():
     print("Бот запускается...")
     try:
+        await create_db()
         dp.update.middleware(DataBaseSession(session_pool=session_maker))
         http_client_session = await http_session.create_session()
         dp.update.middleware(HTTPSessionMiddleware(http_client_session))
