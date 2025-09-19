@@ -78,7 +78,7 @@ async def show_shop(callback: types.CallbackQuery):
 
 async def on_startup(bot):
     print("Бот запускается...")
-    await drop_db()
+    await create_db()
 
 
 async def on_shutdown(bot):
