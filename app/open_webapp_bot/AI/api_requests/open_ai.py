@@ -16,7 +16,7 @@ client = OpenAI(
 )
 
 
-async def gpt_5(session: AsyncSession, user_id: int, prompt: str | None = None, image = None,):
+async def gpt_5(session: AsyncSession, user_id: int, prompt: str = None, image = None,):
     if image:
         b64_image = base64.b64encode(image.read()).decode('utf-8')
 
