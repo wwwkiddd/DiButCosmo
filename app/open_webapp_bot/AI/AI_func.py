@@ -8,11 +8,18 @@ from aiogram.enums import ParseMode
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import FSInputFile
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.open_webapp_bot.AI.api_requests.open_ai import gpt_5
+from app.open_webapp_bot.AI.database.orm_query import orm_delete_gpt_chat_history
 #
 # from openai import BadRequestError
 #
 from app.open_webapp_bot.AI.kbds.inline import get_callback_btns, kbd_tk
 from app.open_webapp_bot.AI.kbds.reply import main_kbd, get_keyboard
+from app.open_webapp_bot.AI.processing import check_balance, send_typing_action, get_image_for_gpt, send_long_text, \
+    use_model
+
 #
 ai_func = Router()
 #
@@ -77,35 +84,35 @@ async def start_ai(callback: types.CallbackQuery, state: FSMContext):
     await state.clear()
 #
 #
-# ################################## For FSM ####################################################################
-#
-# @ai_func.message(F.text == '📝 Текст')
-# async def work_with_text(message: types.Message, state: FSMContext):
-#     await state.clear()
-#
-#     await message.delete()
-#     await message.answer('В этом разделе представлены 3 генеративные модели:\n\n'
-#                          '1) Нейросеть, которая обладает сильными <b>логическими и креативными</b> способностями. Умеет хорошо генерировать идеи, писать тексты. Идеально подходит <i>креаторам и для повседневных задач</i>.\n'
-#                          '📥 Может принимать на вход: <u>текст, фото, видео, голосовые сообщения, документы</u> (PDF, Python, TXT, HTML, CSS и т.д.)\n'
-#                          '⏳ Время ответа - <u>до 1 минуты(текст)</u>\n'
-#                          '                                   <u>1-2 минуты(документы)</u>\n'
-#                          '💰 Стоимость запроса: <b>2 токена</b>\n\n'
-#                          '2) Лучшая нейросеть для <i>учебы и работы</i>, в ней сделан акцент на <b>веб-поиск и проверку фактов</b>\n'
-#                          '📥 Может принимать на вход: <u>текст, фото</u>\n'
-#                          '⏳ Время ответа - <u>до 1 минуты</u>\n'
-#                          '💰 Стоимость запроса: <b>8 токенов</b>\n\n'
-#                          '3) Нейросеть, предназначенная для <b>глубокого поиска</b>.'
-#                          ' Мощнейший инструмент, который может разбивать сложный вопрос на подзадачи, анализировать сотни источников, и выдавать подробные, структурированные отчёты. '
-#                          'Подходит для <i>профессиональной аналитики</i>\n'
-#                          '📥 Может принимать на вход: <u>текст</u>\n'
-#                          '⏳ Время ответа - <u>1-5 минут</u>\n'
-#                          '💰 Стоимость запроса: <b>160 токенов</b>\n\n'
-#                          '<tg-spoiler>🤖 Пожалуйста, периодически отчищайте историю диалога с ИИ, это помогает ускорить работу бота и избежать возможных ошибок</tg-spoiler>',
-#                          reply_markup=get_callback_btns(btns={
-#                              '1) Универсальная 🌠': 'gemini',
-#                              '2) Для работы 👨‍💻': 'perplexity',
-#                              '3) Глубокий поиск 🧑‍🎓': 'sonar-deep-research'
-#                          }))
+################################## For FSM ####################################################################
+
+@ai_func.message(F.text == '📝 Текст')
+async def work_with_text(message: types.Message, state: FSMContext):
+    await state.clear()
+
+    await message.delete()
+    await message.answer('В этом разделе представлены 3 генеративные модели:\n\n'
+                         '1) Нейросеть, которая обладает сильными <b>логическими и креативными</b> способностями. Умеет хорошо генерировать идеи, писать тексты. Идеально подходит <i>креаторам и для повседневных задач</i>.\n'
+                         '📥 Может принимать на вход: <u>текст, фото, видео, голосовые сообщения, документы</u> (PDF, Python, TXT, HTML, CSS и т.д.)\n'
+                         '⏳ Время ответа - <u>до 1 минуты(текст)</u>\n'
+                         '                                   <u>1-2 минуты(документы)</u>\n'
+                         '💰 Стоимость запроса: <b>2 токена</b>\n\n'
+                         '2) Лучшая нейросеть для <i>учебы и работы</i>, в ней сделан акцент на <b>веб-поиск и проверку фактов</b>\n'
+                         '📥 Может принимать на вход: <u>текст, фото</u>\n'
+                         '⏳ Время ответа - <u>до 1 минуты</u>\n'
+                         '💰 Стоимость запроса: <b>8 токенов</b>\n\n'
+                         '3) Нейросеть, предназначенная для <b>глубокого поиска</b>.'
+                         ' Мощнейший инструмент, который может разбивать сложный вопрос на подзадачи, анализировать сотни источников, и выдавать подробные, структурированные отчёты. '
+                         'Подходит для <i>профессиональной аналитики</i>\n'
+                         '📥 Может принимать на вход: <u>текст</u>\n'
+                         '⏳ Время ответа - <u>1-5 минут</u>\n'
+                         '💰 Стоимость запроса: <b>160 токенов</b>\n\n'
+                         '<tg-spoiler>🤖 Пожалуйста, периодически отчищайте историю диалога с ИИ, это помогает ускорить работу бота и избежать возможных ошибок</tg-spoiler>',
+                         reply_markup=get_callback_btns(btns={
+                             '1) Универсальная 🌠': 'gemini',
+                             '2) Для работы 👨‍💻': 'perplexity',
+                             '3) Глубокий поиск 🧑‍🎓': 'sonar-deep-research'
+                         }))
 #
 #
 # @ai_func.callback_query(F.data == 'gemini')
@@ -172,24 +179,24 @@ async def start_ai(callback: types.CallbackQuery, state: FSMContext):
 #     await state.set_state(AISelected.music)
 #
 #
-# @ai_func.message(F.text == '🤖❗️GPT 5❗️🤖')
-# async def work_with_gpt_5(message: types.Message, state: FSMContext):
-#     await message.delete()
-#
-#     photo = FSInputFile('./files/gpt_5.jpg')
-#     await message.answer_photo(photo=photo, caption='''❗Последня нейросеть от OpenAI уже в телеграм!!!\n\n🚀
-# ✨ 📏 Масштаб — GPT‑5 в разы больше и «умнее»: триллионы параметров против сотен миллиардов у GPT‑4.\n
-# 🖼 Мультимодальность — понимает не только текст, но и изображения.\n
-# 🧠 Логика — умеет решать задачи пошагово (chain‑of‑thought), что даёт глубокое и точное мышление.\n
-# 💬 Память и контекст — GPT‑5 помнит больше, поддерживает длинные и осмысленные диалоги.\n
-# 🤖 Автономность — может работать как ИИ‑агент, выполняя многошаговые задания без постоянного вмешательства.\n
-# 🎯 Уровень интеллекта — GPT‑4 можно сравнить со школьником, GPT‑5 — с аспирантом (PhD).\n
-# ⚡ Эффективность — быстрее, точнее и экономичнее в работе.\n\n
-# GPT‑5 — это не просто чат‑бот, а универсальный помощник для науки, бизнеса, программирования и творчества.\n\n
-# Стоимость запроса: 10 токенов''', reply_markup=get_keyboard('🗑 Отчистить историю диалога'))
-#
-#     await state.set_state(AISelected.gpt_5)
-#
+@ai_func.message(F.text == '🤖❗️GPT 5❗️🤖')
+async def work_with_gpt_5(message: types.Message, state: FSMContext):
+    await message.delete()
+
+    photo = FSInputFile('./files/gpt_5.jpg')
+    await message.answer_photo(photo=photo, caption='''❗Последня нейросеть от OpenAI уже в телеграм!!!\n\n🚀
+✨ 📏 Масштаб — GPT‑5 в разы больше и «умнее»: триллионы параметров против сотен миллиардов у GPT‑4.\n
+🖼 Мультимодальность — понимает не только текст, но и изображения.\n
+🧠 Логика — умеет решать задачи пошагово (chain‑of‑thought), что даёт глубокое и точное мышление.\n
+💬 Память и контекст — GPT‑5 помнит больше, поддерживает длинные и осмысленные диалоги.\n
+🤖 Автономность — может работать как ИИ‑агент, выполняя многошаговые задания без постоянного вмешательства.\n
+🎯 Уровень интеллекта — GPT‑4 можно сравнить со школьником, GPT‑5 — с аспирантом (PhD).\n
+⚡ Эффективность — быстрее, точнее и экономичнее в работе.\n\n
+GPT‑5 — это не просто чат‑бот, а универсальный помощник для науки, бизнеса, программирования и творчества.\n\n
+Стоимость запроса: 10 токенов''', reply_markup=get_keyboard('🗑 Отчистить историю диалога'))
+
+    await state.set_state(AISelected.gpt_5)
+
 #
 # @ai_func.message(F.text == '👨‍🍳 Рецепты по фото')
 # async def work_with_receipt(message: types.Message, state: FSMContext):
@@ -204,70 +211,70 @@ async def start_ai(callback: types.CallbackQuery, state: FSMContext):
 #
 # ################################## For TEXT ####################################################################
 #
-#
-# @ai_func.message(AISelected.gpt_5, F.text == '🗑 Отчистить историю диалога')
-# async def clear_history_gpt(message: types.Message, session: AsyncSession):
-#     await orm_delete_gpt_chat_history(session, message.from_user.id)
-#     await message.answer('ℹ️ История диалога удалена, вы можете продолжать общение с ботом')
-#
-# @ai_func.message(AISelected.gpt_5)
-# async def text_gpt(message: types.Message, session: AsyncSession, bot: Bot, http_session: aiohttp.ClientSession):
-#     user_id = message.from_user.id
-#     if await check_balance(session, user_id, 'gpt_5'):
-#
-#         stop_typing = asyncio.Event()
-#         typing_task = asyncio.create_task(send_typing_action(bot, message.chat.id, stop_typing))
-#
-#
-#         try:
-#             if await check_balance(session, user_id, 'gpt_5'):
-#                 image = None
-#
-#                 if message.text:
-#                     response = await gpt_5(session, user_id, prompt=message.text)
-#
-#                 elif message.photo:
-#                     image, file = await get_image_for_gpt(bot, http_session, user_id=user_id,
-#                                                           photo_id=message.photo[-1].file_id)
-#                     os.remove(file)
-#
-#                     response = await gpt_5(session, user_id, prompt=message.caption, image=image)
-#
-#                 else:
-#                     return
-#
-#                 # Останавливаем typing
-#                 stop_typing.set()
-#                 await typing_task
-#
-#
-#                 chunks = await send_long_text(response)
-#                 for chunk in chunks:
-#                     try:
-#                         await message.answer(chunk, parse_mode=ParseMode.MARKDOWN)
-#                     except Exception as e:
-#                         print(e)
-#                         try:
-#                             await message.answer(chunk)
-#                         except Exception as e:
-#                             print(e)
-#                             await message.answer(chunk, parse_mode=None)
-#
-#                 await use_model(session, user_id, 'gpt_5')
-#
-#
-#
-#         except Exception as e:
-#             stop_typing.set()
-#             await typing_task
-#             print(e)
-#             await message.answer("Произошла ошибка при обработке запроса. Пожалуйста, повторите попытку\nЕсли ошибка продолжает возникать, дайте нам знать @aitb_support")
-#     else:
-#         await message.answer(
-#         'К сожалению, у вас закончились токены.\n\n Пожалуйста, пополните счёт, и я с удовольствием выполню ваш запрос!',
-#         reply_markup=kbd_tk)
-#
-#
+
+@ai_func.message(AISelected.gpt_5, F.text == '🗑 Отчистить историю диалога')
+async def clear_history_gpt(message: types.Message, session: AsyncSession):
+    await orm_delete_gpt_chat_history(session, message.from_user.id)
+    await message.answer('ℹ️ История диалога удалена, вы можете продолжать общение с ботом')
+
+@ai_func.message(AISelected.gpt_5)
+async def text_gpt(message: types.Message, session: AsyncSession, bot: Bot, http_session: aiohttp.ClientSession):
+    user_id = message.from_user.id
+    if await check_balance(session, user_id, 'gpt_5'):
+
+        stop_typing = asyncio.Event()
+        typing_task = asyncio.create_task(send_typing_action(bot, message.chat.id, stop_typing))
+
+
+        try:
+            if await check_balance(session, user_id, 'gpt_5'):
+                image = None
+
+                if message.text:
+                    response = await gpt_5(session, user_id, prompt=message.text)
+
+                elif message.photo:
+                    image, file = await get_image_for_gpt(bot, http_session, user_id=user_id,
+                                                          photo_id=message.photo[-1].file_id)
+                    os.remove(file)
+
+                    response = await gpt_5(session, user_id, prompt=message.caption, image=image)
+
+                else:
+                    return
+
+                # Останавливаем typing
+                stop_typing.set()
+                await typing_task
+
+
+                chunks = await send_long_text(response)
+                for chunk in chunks:
+                    try:
+                        await message.answer(chunk, parse_mode=ParseMode.MARKDOWN)
+                    except Exception as e:
+                        print(e)
+                        try:
+                            await message.answer(chunk)
+                        except Exception as e:
+                            print(e)
+                            await message.answer(chunk, parse_mode=None)
+
+                await use_model(session, user_id, 'gpt_5')
+
+
+
+        except Exception as e:
+            stop_typing.set()
+            await typing_task
+            print(e)
+            await message.answer("Произошла ошибка при обработке запроса. Пожалуйста, повторите попытку\nЕсли ошибка продолжает возникать, дайте нам знать @aitb_support")
+    else:
+        await message.answer(
+        'К сожалению, у вас закончились токены.\n\n Пожалуйста, пополните счёт, и я с удовольствием выполню ваш запрос!',
+        reply_markup=kbd_tk)
+
+
 # @ai_func.message(AISelected.perplexity, F.text == '🗑 Отчистить историю диалога')
 # async def clear_history_perplexity(message: types.Message, session: AsyncSession):
 #     await orm_delete_perplexity_chat_history(session, message.from_user.id)

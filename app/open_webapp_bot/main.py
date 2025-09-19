@@ -1,4 +1,5 @@
 from aiogram import Bot, Dispatcher, types, F
+from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
@@ -7,6 +8,8 @@ import asyncio
 import os
 from dotenv import load_dotenv
 
+from app.open_webapp_bot.AI.database.engine import session_maker
+from app.open_webapp_bot.AI.middlewares.db import DataBaseSession, HTTPSessionMiddleware
 from app.shared.yookassa_api import create_payment_link
 
 from app.open_webapp_bot.AI.AI_func import ai_func
@@ -21,6 +24,8 @@ bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTM
 dp = Dispatcher(storage=MemoryStorage())
 
 dp.include_router(ai_func)
+
+http_session = AiohttpSession()
 
 @dp.message(F.text.lower() == "/start")
 async def start(message: types.Message):
@@ -75,8 +80,13 @@ async def show_shop(callback: types.CallbackQuery):
 async def main():
     print("Бот запускается...")
     try:
+        dp.update.middleware(DataBaseSession(session_pool=session_maker))
+        http_client_session = await http_session.create_session()
+        dp.update.middleware(HTTPSessionMiddleware(http_client_session))
         await dp.start_polling(bot)
+
     except KeyboardInterrupt:
+        await http_session.close()
         print("Бот остановлен")
 
 if __name__ == "__main__":
