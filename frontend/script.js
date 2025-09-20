@@ -4,7 +4,7 @@ document.getElementById("bot-form").addEventListener("submit", async (e) => {
     const adminId = document.getElementById("admin_id").value;
 
     try {
-        const response = await fetch("https://dibutcosmo.ru/create_bot/", {
+        const response = await fetch("https://telegram-miniapp-builder.vercel.app/", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
