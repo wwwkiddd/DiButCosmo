@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.open_webapp_bot.AI.api_requests.open_ai import gpt_5
 from app.open_webapp_bot.AI.database.orm_query import orm_delete_gpt_chat_history, orm_get_user, orm_add_user, \
-    orm_update_user_name, orm_update_first_name, orm_update_last_name
+    orm_update_user_name, orm_update_first_name, orm_update_last_name, orm_delete_perplexity_chat_history
 #
 # from openai import BadRequestError
 #
@@ -22,11 +22,11 @@ from app.open_webapp_bot.AI.kbds.reply import main_kbd, get_keyboard
 from app.open_webapp_bot.AI.processing import check_balance, send_typing_action, get_image_for_gpt, send_long_text, \
     use_model
 
-#
+
 ai_func = Router()
-#
-# BOT_TOKEN = os.getenv("BOT_TOKEN")
-#
+
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+
 class AISelected(StatesGroup):
 
     #text models
@@ -277,102 +277,102 @@ async def text_gpt(message: types.Message, session: AsyncSession, bot: Bot, http
         reply_markup=kbd_tk)
 
 
-# @ai_func.message(AISelected.perplexity, F.text == '🗑 Отчистить историю диалога')
-# async def clear_history_perplexity(message: types.Message, session: AsyncSession):
-#     await orm_delete_perplexity_chat_history(session, message.from_user.id)
-#     await message.answer('ℹ️ История диалога удалена, вы можете продолжать общение с ботом')
-#
-# @ai_func.message(AISelected.perplexity)
-# async def text_perplexity(message: types.Message, bot: Bot, session: AsyncSession, http_session: aiohttp.ClientSession):
-#     user_id = message.from_user.id
-#
-#
-#
-#     if await check_balance(session, user_id, 'perplexity'):
-#
-#         stop_typing = asyncio.Event()
-#         typing_task = asyncio.create_task(send_typing_action(bot, message.chat.id, stop_typing))
-#         try:
-#             image = None
-#
-#             if message.photo:
-#                 file_id = message.photo[-1].file_id
-#                 file_info = await bot.get_file(file_id)
-#
-#                 file_path = file_info.file_path
-#
-#                 file_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
-#
-#                 async with http_session.get(file_url) as response:
-#                     if response.status != 200:
-#                         # Обработка ошибок HTTP
-#                         text = await response.text()
-#                         raise Exception(f"HTTP error {response.status}: {text}")
-#                     data = await response.content.read()
-#
-#                     image = f"./files/image_for_perplexity{user_id}.png"
-#                     with open(image, "wb") as f:
-#                         f.write(data)
-#
-#
-#                 content  = message.caption if message.caption else 'Опиши фото'
-#
-#             else:
-#                 content = message.text
-#                 if content[0] == "/": return
-#
-#             ans, citations = await perp_send_request(session, content, image, user_id)
-#
-#             # Останавливаем typing
-#             stop_typing.set()
-#             await typing_task
-#
-#             digits = []
-#             for i in range(len(citations)):
-#                 digits.append(str(i))
-#             for d in digits:
-#                 ans = ans.replace(f'[{d}]', f' [{d}]({citations[int(d) - 1]})')
-#
-#             chunks = await send_long_text(ans)
-#
-#             for chunk in chunks:
-#
-#                 try:
-#                     await message.answer(chunk, parse_mode=ParseMode.MARKDOWN)
-#                 except Exception as e:
-#                     print(e)
-#                     for d in digits:
-#                         chunk = chunk.replace(f' [{d}]({citations[int(d)-1]})', '')
-#                     try:
-#                         await message.answer(chunk)
-#                     except Exception as e:
-#                         print(e)
-#                         await message.answer(chunk, parse_mode=None)
-#
-#             await use_model(session, user_id, 'perplexity')
-#
-#             if citations:
-#                 citations_message = '<strong>Ссылки на источники:</strong>\n'
-#
-#                 k = 1
-#                 for citation in citations:
-#                     citations_message += f'{k} - {citation}\n'
-#                     k += 1
-#
-#                 await message.answer(citations_message)
-#             if image:
-#                 os.remove(image)
-#         except Exception as e:
-#             stop_typing.set()
-#             await typing_task
-#             print(e)
-#             await message.answer("Произошла ошибка при обработке запроса. Пожалуйста, повторите попытку\nЕсли ошибка продолжает возникать, дайте нам знать @aitb_support")
-#     else:
-#         await message.answer(
-#             'К сожалению, у вас закончились токены.\n\n Пожалуйста, пополните счёт, и я с удовольствием выполню ваш запрос!',
-#             reply_markup=kbd_tk)
-#
-#
+@ai_func.message(AISelected.perplexity, F.text == '🗑 Отчистить историю диалога')
+async def clear_history_perplexity(message: types.Message, session: AsyncSession):
+    await orm_delete_perplexity_chat_history(session, message.from_user.id)
+    await message.answer('ℹ️ История диалога удалена, вы можете продолжать общение с ботом')
+
+@ai_func.message(AISelected.perplexity)
+async def text_perplexity(message: types.Message, bot: Bot, session: AsyncSession, http_session: aiohttp.ClientSession):
+    user_id = message.from_user.id
+
+
+
+    if await check_balance(session, user_id, 'perplexity'):
+
+        stop_typing = asyncio.Event()
+        typing_task = asyncio.create_task(send_typing_action(bot, message.chat.id, stop_typing))
+        try:
+            image = None
+
+            if message.photo:
+                file_id = message.photo[-1].file_id
+                file_info = await bot.get_file(file_id)
+
+                file_path = file_info.file_path
+
+                file_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
+
+                async with http_session.get(file_url) as response:
+                    if response.status != 200:
+                        # Обработка ошибок HTTP
+                        text = await response.text()
+                        raise Exception(f"HTTP error {response.status}: {text}")
+                    data = await response.content.read()
+
+                    image = f"./files/image_for_perplexity{user_id}.png"
+                    with open(image, "wb") as f:
+                        f.write(data)
+
+
+                content  = message.caption if message.caption else 'Опиши фото'
+
+            else:
+                content = message.text
+                if content[0] == "/": return
+
+            ans, citations = await perp_send_request(session, content, image, user_id)
+
+            # Останавливаем typing
+            stop_typing.set()
+            await typing_task
+
+            digits = []
+            for i in range(len(citations)):
+                digits.append(str(i))
+            for d in digits:
+                ans = ans.replace(f'[{d}]', f' [{d}]({citations[int(d) - 1]})')
+
+            chunks = await send_long_text(ans)
+
+            for chunk in chunks:
+
+                try:
+                    await message.answer(chunk, parse_mode=ParseMode.MARKDOWN)
+                except Exception as e:
+                    print(e)
+                    for d in digits:
+                        chunk = chunk.replace(f' [{d}]({citations[int(d)-1]})', '')
+                    try:
+                        await message.answer(chunk)
+                    except Exception as e:
+                        print(e)
+                        await message.answer(chunk, parse_mode=None)
+
+            await use_model(session, user_id, 'perplexity')
+
+            if citations:
+                citations_message = '<strong>Ссылки на источники:</strong>\n'
+
+                k = 1
+                for citation in citations:
+                    citations_message += f'{k} - {citation}\n'
+                    k += 1
+
+                await message.answer(citations_message)
+            if image:
+                os.remove(image)
+        except Exception as e:
+            stop_typing.set()
+            await typing_task
+            print(e)
+            await message.answer("Произошла ошибка при обработке запроса. Пожалуйста, повторите попытку\nЕсли ошибка продолжает возникать, дайте нам знать @aitb_support")
+    else:
+        await message.answer(
+            'К сожалению, у вас закончились токены.\n\n Пожалуйста, пополните счёт, и я с удовольствием выполню ваш запрос!',
+            reply_markup=kbd_tk)
+
+
 # @ai_func.message(AISelected.sonar_deep_research, F.text == '🗑 Отчистить историю диалога')
 # async def clear_history_sonar_deep(message: types.Message, session: AsyncSession):
 #     await orm_delete_sonar_deep_chat_history(session, message.from_user.id)
