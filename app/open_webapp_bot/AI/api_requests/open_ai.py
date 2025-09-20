@@ -17,6 +17,7 @@ client = OpenAI(
 
 
 async def gpt_5(session: AsyncSession, user_id: int, prompt: str = None, image = None,):
+    print('gpt-5')
     if image:
         b64_image = base64.b64encode(image.read()).decode('utf-8')
 
@@ -59,7 +60,7 @@ async def gpt_5(session: AsyncSession, user_id: int, prompt: str = None, image =
         response = await asyncio.to_thread(
             client.responses.create,
             model="openai/gpt-5",
-            messages=history
+            input=history
         )
 
         print(response)
