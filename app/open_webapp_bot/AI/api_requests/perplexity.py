@@ -16,7 +16,7 @@ client = OpenAI(
 )
 
 
-async def perp_send_request(session: AsyncSession, user_id: int, prompt: str = None, image = None,):
+async def perp_send_request(session: AsyncSession, user_id: int, prompt: str = None, image = None):
     if image:
         print('its_image')
         b64_image = base64.b64encode(image.read()).decode('utf-8')
