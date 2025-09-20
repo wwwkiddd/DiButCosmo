@@ -44,10 +44,8 @@ async def gpt_5(session: AsyncSession, user_id: int, prompt: str = None, image =
     else:
         await orm_update_gpt_chat_history(session, [{
             "role": "user",
-            "content": [
-                {"type": "input_text", "text": prompt},
-            ],
-        }], user_id)
+            "content": prompt},
+        ], user_id)
     history = await orm_get_chat_history(session, user_id, 'gpt')
     print(history)
     try:
