@@ -12,6 +12,7 @@ from aiogram.types import FSInputFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.open_webapp_bot.AI.api_requests.open_ai import gpt_5
+from app.open_webapp_bot.AI.api_requests.perplexity import perp_send_request
 from app.open_webapp_bot.AI.database.orm_query import orm_delete_gpt_chat_history, orm_get_user, orm_add_user, \
     orm_update_user_name, orm_update_first_name, orm_update_last_name, orm_delete_perplexity_chat_history
 #
@@ -321,7 +322,7 @@ async def text_perplexity(message: types.Message, bot: Bot, session: AsyncSessio
                 content = message.text
                 if content[0] == "/": return
 
-            ans, citations = await perp_send_request(session, content, image, user_id)
+            ans, citations = await perp_send_request(session, user_id, content, image, )
 
             # Останавливаем typing
             stop_typing.set()
