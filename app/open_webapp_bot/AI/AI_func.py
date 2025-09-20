@@ -125,16 +125,16 @@ async def work_with_text(message: types.Message, state: FSMContext):
 #
 #     await callback.message.answer('Выбранная модель: <b>Универсальная 🌠</b>\nНапишите запрос...',
 #                                   reply_markup=get_keyboard('🗑 Отчистить историю диалога'))
-#
-#
-# @ai_func.callback_query(F.data == 'perplexity')
-# async def enter_to_perplexity(callback: types.CallbackQuery, state: FSMContext):
-#     await callback.answer()
-#     await callback.message.answer('Выбранная модель: <b>Для работы 👨‍💻</b>\nНапишите запрос...',
-#                                   reply_markup=get_keyboard('🗑 Отчистить историю диалога'))
-#
-#     await state.set_state(AISelected.perplexity)
-#
+
+
+@ai_func.callback_query(F.data == 'perplexity')
+async def enter_to_perplexity(callback: types.CallbackQuery, state: FSMContext):
+    await callback.answer()
+    await callback.message.answer('Выбранная модель: <b>Для работы 👨‍💻</b>\nНапишите запрос...',
+                                  reply_markup=get_keyboard('🗑 Отчистить историю диалога'))
+
+    await state.set_state(AISelected.perplexity)
+
 #
 # @ai_func.callback_query(F.data == 'sonar-deep-research')
 # async def enter_to_sonar_deep(callback: types.CallbackQuery, state: FSMContext):
