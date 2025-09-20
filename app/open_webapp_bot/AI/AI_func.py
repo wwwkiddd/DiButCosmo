@@ -222,6 +222,7 @@ async def clear_history_gpt(message: types.Message, session: AsyncSession):
 
 @ai_func.message(AISelected.gpt_5)
 async def text_gpt(message: types.Message, session: AsyncSession, bot: Bot, http_session: aiohttp.ClientSession):
+    print('going_to_gpt')
     user_id = message.from_user.id
     if await check_balance(session, user_id, 'gpt_5'):
 
@@ -237,6 +238,7 @@ async def text_gpt(message: types.Message, session: AsyncSession, bot: Bot, http
                     response = await gpt_5(session, user_id, prompt=message.text)
 
                 elif message.photo:
+                    print('its photo')
                     image, file = await get_image_for_gpt(bot, http_session, user_id=user_id,
                                                           photo_id=message.photo[-1].file_id)
                     os.remove(file)
