@@ -31,7 +31,9 @@ async def gpt_5(session: AsyncSession, user_id: int, prompt: str = None, image =
                 }
             ],
         }], user_id)
+        print('image and text added to history')
     elif image:
+
         await orm_update_gpt_chat_history(session, [{
             "role": "user",
             "content": [
@@ -41,6 +43,8 @@ async def gpt_5(session: AsyncSession, user_id: int, prompt: str = None, image =
                 }
             ],
         }], user_id)
+
+        print('image added to history')
     else:
         await orm_update_gpt_chat_history(session, [{
             "role": "user",
