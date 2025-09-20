@@ -78,7 +78,7 @@ async def get_image_for_gpt(bot: Bot, http_session: aiohttp.ClientSession, user_
         bytes = photo_bytes
 
 
-    file = f"./files/image_for_gpt{user_id}.jpeg"
+    file = f"app/open_webapp_bot/AI/files/image_for_gpt{user_id}.jpeg"
 
     with open(file, "wb") as f:
         f.write(bytes)
