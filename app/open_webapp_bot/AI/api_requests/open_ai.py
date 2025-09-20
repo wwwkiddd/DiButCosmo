@@ -27,7 +27,7 @@ async def gpt_5(session: AsyncSession, user_id: int, prompt: str = None, image =
                 {"type": "text", "text": prompt},
                 {
                     "type": "input_image",
-                    "image_uri": f"data:image/jpeg;base64,{b64_image}"
+                    "image_url": f"data:image/jpeg;base64,{b64_image}"
                 }
             ],
         }], user_id)
@@ -39,7 +39,7 @@ async def gpt_5(session: AsyncSession, user_id: int, prompt: str = None, image =
             "content": [
                 {
                     "type": "input_image",
-                    "image_uri": f"data:image/jpeg;base64,{b64_image}"
+                    "image_url": f"data:image/jpeg;base64,{b64_image}"
                 }
             ],
         }], user_id)
@@ -57,7 +57,7 @@ async def gpt_5(session: AsyncSession, user_id: int, prompt: str = None, image =
 
 
         response = await asyncio.to_thread(
-            client.chat.completions.create,
+            client.responses.create,
             model="openai/gpt-5",
             messages=history
         )
