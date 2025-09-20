@@ -231,41 +231,38 @@ async def text_gpt(message: types.Message, session: AsyncSession, bot: Bot, http
 
 
         try:
-            if await check_balance(session, user_id, 'gpt_5'):
-                image = None
+            if message.text:
+                response = await gpt_5(session, user_id, prompt=message.text)
 
-                if message.text:
-                    response = await gpt_5(session, user_id, prompt=message.text)
+            elif message.photo:
+                print('its photo')
+                image, file = await get_image_for_gpt(bot, http_session, user_id=user_id,
+                                                      photo_id=message.photo[-1].file_id)
+                os.remove(file)
 
-                elif message.photo:
-                    print('its photo')
-                    image, file = await get_image_for_gpt(bot, http_session, user_id=user_id,
-                                                          photo_id=message.photo[-1].file_id)
-                    os.remove(file)
+                response = await gpt_5(session, user_id, prompt=message.caption, image=image)
 
-                    response = await gpt_5(session, user_id, prompt=message.caption, image=image)
+            else:
+                return
 
-                else:
-                    return
-
-                # Останавливаем typing
-                stop_typing.set()
-                await typing_task
+            # Останавливаем typing
+            stop_typing.set()
+            await typing_task
 
 
-                chunks = await send_long_text(response)
-                for chunk in chunks:
+            chunks = await send_long_text(response)
+            for chunk in chunks:
+                try:
+                    await message.answer(chunk, parse_mode=ParseMode.MARKDOWN)
+                except Exception as e:
+                    print(e)
                     try:
-                        await message.answer(chunk, parse_mode=ParseMode.MARKDOWN)
+                        await message.answer(chunk)
                     except Exception as e:
                         print(e)
-                        try:
-                            await message.answer(chunk)
-                        except Exception as e:
-                            print(e)
-                            await message.answer(chunk, parse_mode=None)
+                        await message.answer(chunk, parse_mode=None)
 
-                await use_model(session, user_id, 'gpt_5')
+            # await use_model(session, user_id, 'gpt_5')
 
 
 

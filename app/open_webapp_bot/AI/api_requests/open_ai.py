@@ -42,7 +42,7 @@ async def gpt_5(session: AsyncSession, user_id: int, prompt: str = None, image =
             "content": [
                 {
                     "type": "input_image",
-                    "image_url": f"data:image/jpeg;base64,{b64_image}"
+                    "image_url": {"url": f"data:image/jpeg;base64,{b64_image}"}
                 }
             ],
         }], user_id)
