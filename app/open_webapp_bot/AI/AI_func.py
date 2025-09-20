@@ -51,9 +51,8 @@ class AISelected(StatesGroup):
     video = State()
     video_adding_prompt = State()
     video_editing = State()
-#
-#
-#
+
+
 @ai_func.callback_query(F.data == 'ai')
 async def start_ai(callback: types.CallbackQuery, state: FSMContext, session: AsyncSession):
     user_id = callback.from_user.id
