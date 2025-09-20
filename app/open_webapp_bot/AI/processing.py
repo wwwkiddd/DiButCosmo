@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.open_webapp_bot.AI.database.orm_query import orm_get_balance, orm_update_balance
 
-BOT_TOKEN = os.getenv('TOKEN')
+BOT_TOKEN = os.getenv('BOT_TOKEN')
 
 rate = {
     'gemini': 2,
