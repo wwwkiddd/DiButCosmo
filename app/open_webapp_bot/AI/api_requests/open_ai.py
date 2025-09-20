@@ -27,12 +27,17 @@ async def gpt_5(session: AsyncSession, user_id: int, prompt: str = None, image =
         await orm_update_gpt_chat_history(session, [{
             "role": "user",
             "content": [
-                {"type": "text", "text": prompt},
-                {
-                    "type": "input_image",
-                    "image_uri": f"data:image/jpeg;base64,{b64_image}"
-                }
-            ],
+        {
+          "type": "text",
+          "text": prompt
+        },
+        {
+          "type": "image_url",
+          "image_url": {
+            "url": f"data:image/jpeg;base64,{b64_image}"
+          }
+        }
+      ]
         }], user_id)
         print('image and text added to history')
     elif image:
@@ -40,11 +45,17 @@ async def gpt_5(session: AsyncSession, user_id: int, prompt: str = None, image =
         await orm_update_gpt_chat_history(session, [{
             "role": "user",
             "content": [
-                {
-                    "type": "input_image",
-                    "image_url": {"url": f"data:image/jpeg;base64,{b64_image}"}
-                }
-            ],
+        {
+          "type": "text",
+          "text": ''
+        },
+        {
+          "type": "image_url",
+          "image_url": {
+            "url": f"data:image/jpeg;base64,{b64_image}"
+          }
+        }
+      ],
         }], user_id)
 
         print('image added to history')
