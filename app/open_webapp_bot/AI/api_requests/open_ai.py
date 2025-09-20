@@ -48,10 +48,11 @@ async def gpt_5(session: AsyncSession, user_id: int, prompt: str = None, image =
                 {"type": "input_text", "text": prompt},
             ],
         }], user_id)
-
+    history = await orm_get_chat_history(session, user_id, 'gpt')
+    print(history)
     try:
-        history = await orm_get_chat_history(session, user_id, 'gpt')
-        print(history)
+
+
 
         response = await asyncio.to_thread(
             client.chat.completions.create,
