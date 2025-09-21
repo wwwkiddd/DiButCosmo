@@ -5,7 +5,7 @@ import os
 from openai import OpenAI
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.open_webapp_bot.AI.database.orm_query import orm_update_gpt_chat_history, orm_get_chat_history, \
+from app.open_webapp_bot.AI.database.orm_query import , orm_get_chat_history, \
     orm_update_perplexity_chat_history
 
 API = os.getenv('API_GPT')
