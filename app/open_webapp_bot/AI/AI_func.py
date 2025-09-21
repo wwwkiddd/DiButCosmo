@@ -349,8 +349,7 @@ async def text_perplexity(message: types.Message, bot: Bot, session: AsyncSessio
                     k += 1
 
                 await message.answer(citations_message)
-            if image:
-                os.remove(image)
+
         except Exception as e:
             stop_typing.set()
             await typing_task
