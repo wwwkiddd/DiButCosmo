@@ -20,7 +20,7 @@ from app.open_webapp_bot.AI.database.orm_query import orm_delete_gpt_chat_histor
 #
 from app.open_webapp_bot.AI.kbds.inline import get_callback_btns, kbd_tk
 from app.open_webapp_bot.AI.kbds.reply import main_kbd, get_keyboard
-from app.open_webapp_bot.AI.processing import check_balance, send_typing_action, get_image_for_gpt, send_long_text, \
+from app.open_webapp_bot.AI.processing import check_balance, send_typing_action, get_image_for_ai, send_long_text, \
     use_model
 
 
@@ -237,7 +237,7 @@ async def text_gpt(message: types.Message, session: AsyncSession, bot: Bot, http
 
             elif message.photo:
                 print('its photo')
-                image, file = await get_image_for_gpt(bot, http_session, user_id=user_id,
+                image, file = await get_image_for_ai(bot, http_session, user_id=user_id,
                                                       photo_id=message.photo[-1].file_id)
                 os.remove(file)
 
@@ -297,23 +297,9 @@ async def text_perplexity(message: types.Message, bot: Bot, session: AsyncSessio
             image = None
 
             if message.photo:
-                file_id = message.photo[-1].file_id
-                file_info = await bot.get_file(file_id)
-
-                file_path = file_info.file_path
-
-                file_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
-
-                async with http_session.get(file_url) as response:
-                    if response.status != 200:
-                        # Обработка ошибок HTTP
-                        text = await response.text()
-                        raise Exception(f"HTTP error {response.status}: {text}")
-                    data = await response.content.read()
-
-                    image = f"app/open_webapp_bot/AI/files/image_for_perplexity{user_id}.png"
-                    with open(image, "wb") as f:
-                        f.write(data)
+                image, file = await get_image_for_ai(bot, http_session, user_id=user_id,
+                                                     photo_id=message.photo[-1].file_id)
+                os.remove(file)
 
 
                 content  = message.caption if message.caption else 'Опиши фото'
@@ -323,7 +309,7 @@ async def text_perplexity(message: types.Message, bot: Bot, session: AsyncSessio
                 if content[0] == "/": return
 
             print(content)
-            ans, citations= await perp_send_request(session, user_id, content, image, )
+            ans, citations= await perp_send_request(session, user_id, content, image)
 
 
             # Останавливаем typing

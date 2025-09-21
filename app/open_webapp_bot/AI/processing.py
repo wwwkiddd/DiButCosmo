@@ -60,7 +60,7 @@ async def get_image_for_video(image: str):
     data_uri = f'data:{mime_type};base64,{b64_string}'
     return data_uri
 
-async def get_image_for_gpt(bot: Bot, http_session: aiohttp.ClientSession, user_id: int, photo_id: str | None = None,  photo_bytes = None, ):
+async def get_image_for_ai(bot: Bot, http_session: aiohttp.ClientSession, user_id: int, photo_id: str | None = None,  photo_bytes = None, ):
     # files = []
     if photo_id:
         file_id = photo_id
