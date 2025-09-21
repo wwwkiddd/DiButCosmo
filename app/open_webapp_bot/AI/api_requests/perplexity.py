@@ -60,6 +60,7 @@ async def perp_send_request(session: AsyncSession, user_id: int, prompt: str = N
 
         print('image added to history')
     else:
+        print('no image')
         await orm_update_gpt_chat_history(session, [{
             "role": "user",
             "content": prompt},
