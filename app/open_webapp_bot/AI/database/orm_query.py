@@ -14,15 +14,7 @@ async def orm_add_user(session: AsyncSession, data: dict):
         tokens=data['tokens'],
         username=data['username'],
         gemini_chat_history=[],
-        perplexity_chat_history=[
-            {
-                "role": "system",
-                "content": (
-                    "You are an artificial intelligence assistant and you need to "
-                    "engage in a helpful, detailed, polite conversation with a user."
-                ),
-            },
-        ],
+        perplexity_chat_history=[],
         deep_research_chat_history=[]
     )
     session.add(user)
@@ -43,15 +35,7 @@ async def orm_get_user(session:AsyncSession, user_id: int):
 
 async def orm_clear_user_histories(session: AsyncSession):
     query = update(User).values(gemini_chat_history=[],
-        perplexity_chat_history=[
-            {
-                "role": "system",
-                "content": (
-                    "You are an artificial intelligence assistant and you need to "
-                    "engage in a helpful, detailed, polite conversation with a user."
-                ),
-            },
-        ],
+        perplexity_chat_history=[],
         deep_research_chat_history=[]
     )
     await session.execute(query)

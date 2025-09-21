@@ -5,7 +5,8 @@ import os
 from openai import OpenAI
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.open_webapp_bot.AI.database.orm_query import orm_update_gpt_chat_history, orm_get_chat_history
+from app.open_webapp_bot.AI.database.orm_query import orm_update_gpt_chat_history, orm_get_chat_history, \
+    orm_update_perplexity_chat_history
 
 API = os.getenv('API_GPT')
 
@@ -24,7 +25,7 @@ async def perp_send_request(session: AsyncSession, user_id: int, prompt: str = N
         print('yes')
 
     if image and prompt:
-        await orm_update_gpt_chat_history(session, [{
+        await orm_update_perplexity_chat_history(session, [{
             "role": "user",
             "content": [
         {
@@ -42,7 +43,7 @@ async def perp_send_request(session: AsyncSession, user_id: int, prompt: str = N
         print('image and text added to history')
     elif image:
         print('working on histiry')
-        await orm_update_gpt_chat_history(session, [{
+        await orm_update_perplexity_chat_history(session, [{
             "role": "user",
             "content": [
         {
@@ -61,15 +62,15 @@ async def perp_send_request(session: AsyncSession, user_id: int, prompt: str = N
         print('image added to history')
     else:
         print('no image')
-        await orm_update_gpt_chat_history(session, [{
+        await orm_update_perplexity_chat_history(session, [{
             "role": "user",
             "content": prompt},
         ], user_id)
+        print('udated')
+
     history = await orm_get_chat_history(session, user_id, 'perplexity')
     print(history)
     try:
-
-
 
         response = await asyncio.to_thread(
             client.chat.completions.create,
@@ -79,7 +80,7 @@ async def perp_send_request(session: AsyncSession, user_id: int, prompt: str = N
 
         print(response)
         ans = response.choices[0].message.content
-        await orm_update_gpt_chat_history(session, [
+        await orm_update_perplexity_chat_history(session, [
             {"role": "assistant", "content": [
                 {"type": "output_text", "text": ans}
             ]}

@@ -323,9 +323,8 @@ async def text_perplexity(message: types.Message, bot: Bot, session: AsyncSessio
                 if content[0] == "/": return
 
             print(content)
-            ans= await perp_send_request(session, user_id, content, image, )
-            print(ans)
-            return
+            ans, citations= await perp_send_request(session, user_id, content, image, )
+
 
             # Останавливаем typing
             stop_typing.set()
