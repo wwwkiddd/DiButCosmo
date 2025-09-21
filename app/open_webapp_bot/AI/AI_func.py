@@ -311,7 +311,7 @@ async def text_perplexity(message: types.Message, bot: Bot, session: AsyncSessio
                         raise Exception(f"HTTP error {response.status}: {text}")
                     data = await response.content.read()
 
-                    image = f"./files/image_for_perplexity{user_id}.png"
+                    image = f".app/open_webapp_bot/AI/files/image_for_perplexity{user_id}.png"
                     with open(image, "wb") as f:
                         f.write(data)
 
