@@ -17,6 +17,7 @@ client = OpenAI(
 
 
 async def perp_send_request(session: AsyncSession, user_id: int, prompt: str = None, image = None):
+    print('to perplexity')
     if image:
         print('its_image')
         b64_image = base64.b64encode(image.read()).decode('utf-8')
@@ -83,7 +84,7 @@ async def perp_send_request(session: AsyncSession, user_id: int, prompt: str = N
             ]}
         ], user_id)
 
-
+        print(response.citations)
         return ans, response.citations
 
     except Exception as e:
