@@ -446,9 +446,9 @@ async def text_gemini(message: types.Message, bot: Bot, session: AsyncSession,  
 
 
         if message.photo:
-            file_id = message.photo[-1].file_id
-
-            image = await get_image_for_ai(bot, http_session, user_id, photo_id=file_id)
+            image, file = await get_image_for_ai(bot, http_session, user_id=user_id,
+                                                 photo_id=message.photo[-1].file_id)
+            os.remove(file)
             add_info.append(image)
             add_info.append('image/jpeg')
 
