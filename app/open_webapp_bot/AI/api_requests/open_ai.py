@@ -79,9 +79,7 @@ async def gpt_5(session: AsyncSession, user_id: int, prompt: str = None, image =
         print(response)
         ans = response.choices[0].message.content
         await orm_update_gpt_chat_history(session, [
-            {"role": "assistant", "content": [
-                {"type": "output_text", "text": ans}
-            ]}
+            {"role": "assistant", "content": ans}
         ], user_id)
 
 

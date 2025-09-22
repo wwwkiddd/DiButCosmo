@@ -426,7 +426,7 @@ async def clear_history_gem(message: types.Message, session: AsyncSession):
     await message.answer('ℹ️ История диалога удалена, вы можете продолжать общение с ботом')
 
 @ai_func.message(AISelected.gemini)
-async def text_gemini(message: types.Message, bot: Bot, session: AsyncSession):
+async def text_gemini(message: types.Message, bot: Bot, session: AsyncSession,  http_session: aiohttp.ClientSession):
     user_id = message.from_user.id
 
 
@@ -448,18 +448,13 @@ async def text_gemini(message: types.Message, bot: Bot, session: AsyncSession):
         if message.photo:
             file_id = message.photo[-1].file_id
 
-            buffer = io.BytesIO()
-
-            await bot.download(file=file_id, destination=buffer)
-            buffer.seek(0)
-
-            bytes  = buffer.read()
-            add_info.append(bytes)
+            image = await get_image_for_ai(bot, http_session, user_id, photo_id=file_id)
+            add_info.append(image)
             add_info.append('image/jpeg')
 
 
             prompt = message.caption if message.caption else 'Опиши фото'
-            request.append(prompt)
+
 
         elif message.document:
             if message.document.mime_type not in permitted_gemini_docs:
@@ -542,7 +537,7 @@ async def text_gemini(message: types.Message, bot: Bot, session: AsyncSession):
                     stop_typing.set()
                     await typing_task
                     break
-            except ServerError as e:
+            except Exception as e:
                 print(e)
                 if attempt == 4:
                     await message.answer("К сожалению, сервис временно перегружен. Попробуйте позже или воспользуйтесь другой моделью.")

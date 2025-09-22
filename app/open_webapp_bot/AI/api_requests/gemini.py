@@ -74,47 +74,47 @@ client = OpenAI(
 )
 
 
-async def gem_send_request(session: AsyncSession, user_id: int, prompt: str = None, image = None):
+async def gem_send_request(session: AsyncSession, user_id: int, prompt: str = None, add_info = None):
     print('to gemini')
-    if image:
+    if add_info[-1]:
         print('its_image')
-        b64_image = base64.b64encode(image.read()).decode('utf-8')
+        b64_image = base64.b64encode(add_info[0].read()).decode('utf-8')
         print('yes')
 
-    if image and prompt:
-        await orm_update_gemini_chat_history(session, [{
-            "role": "user",
-            "content": [
-        {
-          "type": "text",
-          "text": prompt
-        },
-        {
-          "type": "image_url",
-          "image_url": {
-            "url": f"data:image/jpeg;base64,{b64_image}"
-          }
-        }
-      ]
-        }], user_id)
-        print('image and text added to history')
-    elif image:
-        print('working on histiry')
-        await orm_update_gemini_chat_history(session, [{
-            "role": "user",
-            "content": [
-        {
-          "type": "text",
-          "text": ''
-        },
-        {
-          "type": "image_url",
-          "image_url": {
-            "url": f"data:image/jpeg;base64,{b64_image}"
-          }
-        }
-      ],
-        }], user_id)
+        if prompt:
+            await orm_update_gemini_chat_history(session, [{
+                "role": "user",
+                "content": [
+            {
+              "type": "text",
+              "text": prompt
+            },
+            {
+              "type": "image_url",
+              "image_url": {
+                "url": f"data:image/jpeg;base64,{b64_image}"
+              }
+            }
+          ]
+            }], user_id)
+            print('image and text added to history')
+        else:
+            print('working on history')
+            await orm_update_gemini_chat_history(session, [{
+                "role": "user",
+                "content": [
+            {
+              "type": "text",
+              "text": ''
+            },
+            {
+              "type": "image_url",
+              "image_url": {
+                "url": f"data:image/jpeg;base64,{b64_image}"
+              }
+            }
+          ],
+            }], user_id)
 
         print('image added to history')
     else:
@@ -150,7 +150,7 @@ async def gem_send_request(session: AsyncSession, user_id: int, prompt: str = No
 
 
 
-async def gem_receipt(prompt: str, add_info: tuple | None = None):
+async def gem_receipt(prompt: str, add_info: tuple = None):
     print('in process')
     content = [prompt]
     # if add_info:

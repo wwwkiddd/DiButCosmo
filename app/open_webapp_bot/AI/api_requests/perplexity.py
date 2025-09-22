@@ -81,9 +81,7 @@ async def perp_send_request(session: AsyncSession, user_id: int, prompt: str = N
         print(response)
         ans = response.choices[0].message.content
         await orm_update_perplexity_chat_history(session, [
-            {"role": "assistant", "content": [
-                {"type": "output_text", "text": ans}
-            ]}
+            {"role": "assistant", "content": ans}
         ], user_id)
 
         print(response.citations)
