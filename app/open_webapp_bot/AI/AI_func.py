@@ -475,7 +475,7 @@ async def text_gemini(message: types.Message, bot: Bot, session: AsyncSession,  
             add_info.append(message.document.mime_type)
 
             prompt = message.caption if message.caption else 'Что в документе'
-            request.append(prompt)
+
 
         elif message.video:
             if message.video.mime_type not in permitted_gemini_docs:

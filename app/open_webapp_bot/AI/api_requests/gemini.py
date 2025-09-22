@@ -6,6 +6,7 @@ from openai import OpenAI
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.open_webapp_bot.AI.database.orm_query import orm_get_chat_history, orm_update_gemini_chat_history
+from app.open_webapp_bot.AI.processing import permitted_gemini_docs
 
 
 async def part_to_dict(part):
@@ -81,7 +82,7 @@ async def gem_send_request(session: AsyncSession, user_id: int, prompt: str = No
         b64_image = base64.b64encode(add_info[0].read()).decode('utf-8')
         print('yes')
 
-        if prompt:
+        if add_info[-1] == 'image/jpeg':
             await orm_update_gemini_chat_history(session, [{
                 "role": "user",
                 "content": [
@@ -117,6 +118,26 @@ async def gem_send_request(session: AsyncSession, user_id: int, prompt: str = No
             }], user_id)
 
         print('image added to history')
+
+    elif add_info and add_info[-1] in permitted_gemini_docs:
+        response = client.files.create(file=add_info[0], purpose="assistants")
+        file_id = response.data.id
+
+        await orm_update_gemini_chat_history(session, [{
+            "role": "user",
+            "content": [
+                {
+                    "type": "input_file",
+                    "file_id": file_id  # идентификатор загруженного файла, полученный при загрузке через OpenAI SDK
+                },
+                {
+                    "type": "text",
+                    "text": prompt
+                }
+            ],
+        }], user_id)
+
+
     else:
         print('no image')
         await orm_update_gemini_chat_history(session, [{
