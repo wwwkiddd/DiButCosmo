@@ -76,7 +76,7 @@ client = OpenAI(
 
 async def gem_send_request(session: AsyncSession, user_id: int, prompt: str = None, add_info = None):
     print('to gemini')
-    if add_info[-1] == 'image/jpeg':
+    if add_info and add_info[-1] == 'image/jpeg':
         print('its_image')
         b64_image = base64.b64encode(add_info[0].read()).decode('utf-8')
         print('yes')
