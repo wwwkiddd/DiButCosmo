@@ -118,15 +118,15 @@ async def work_with_text(message: types.Message, state: FSMContext):
                              '2) Для работы 👨‍💻': 'perplexity',
                              '3) Глубокий поиск 🧑‍🎓': 'sonar-deep-research'
                          }))
-#
-#
-# @ai_func.callback_query(F.data == 'gemini')
-# async def enter_to_gemini(callback: types.CallbackQuery, state: FSMContext):
-#     await callback.answer()
-#     await state.set_state(AISelected.gemini)
-#
-#     await callback.message.answer('Выбранная модель: <b>Универсальная 🌠</b>\nНапишите запрос...',
-#                                   reply_markup=get_keyboard('🗑 Отчистить историю диалога'))
+
+
+@ai_func.callback_query(F.data == 'gemini')
+async def enter_to_gemini(callback: types.CallbackQuery, state: FSMContext):
+    await callback.answer()
+    await state.set_state(AISelected.gemini)
+
+    await callback.message.answer('Выбранная модель: <b>Универсальная 🌠</b>\nНапишите запрос...',
+                                  reply_markup=get_keyboard('🗑 Отчистить историю диалога'))
 
 
 @ai_func.callback_query(F.data == 'perplexity')
