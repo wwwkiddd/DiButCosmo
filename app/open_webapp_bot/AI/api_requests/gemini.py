@@ -138,9 +138,7 @@ async def gem_send_request(session: AsyncSession, user_id: int, prompt: str = No
         print(response)
         ans = response.choices[0].message.content
         await orm_update_gemini_chat_history(session, [
-            {"role": "assistant", "content": [
-                {"type": "output_text", "text": ans}
-            ]}
+            {"role": "assistant", "content":  ans}
         ], user_id)
 
 
