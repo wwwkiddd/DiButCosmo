@@ -143,8 +143,8 @@ async def gem_send_request(session: AsyncSession, user_id: int, prompt: str = No
             ]}
         ], user_id)
 
-        print(response.citations)
-        return ans, response.citations
+
+        return ans
 
     except Exception as e:
         print(e)
