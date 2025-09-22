@@ -11,18 +11,19 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import FSInputFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.open_webapp_bot.AI.api_requests.gemini import gem_send_request
 from app.open_webapp_bot.AI.api_requests.open_ai import gpt_5
 from app.open_webapp_bot.AI.api_requests.perplexity import perp_send_request
 from app.open_webapp_bot.AI.database.orm_query import orm_delete_gpt_chat_history, orm_get_user, orm_add_user, \
-    orm_update_user_name, orm_update_first_name, orm_update_last_name, orm_delete_perplexity_chat_history
+    orm_update_user_name, orm_update_first_name, orm_update_last_name, orm_delete_perplexity_chat_history, \
+    orm_delete_gemini_chat_history
 #
 # from openai import BadRequestError
 #
 from app.open_webapp_bot.AI.kbds.inline import get_callback_btns, kbd_tk
 from app.open_webapp_bot.AI.kbds.reply import main_kbd, get_keyboard
 from app.open_webapp_bot.AI.processing import check_balance, send_typing_action, get_image_for_ai, send_long_text, \
-    use_model
-
+    use_model, permitted_gemini_docs
 
 ai_func = Router()
 
@@ -419,159 +420,160 @@ async def text_perplexity(message: types.Message, bot: Bot, session: AsyncSessio
 #
 #
 #
-# @ai_func.message(AISelected.gemini, F.text == '🗑 Отчистить историю диалога')
-# async def clear_history_gem(message: types.Message, session: AsyncSession):
-#     await orm_delete_gemini_chat_history(session, message.from_user.id)
-#     await message.answer('ℹ️ История диалога удалена, вы можете продолжать общение с ботом')
-#
-# @ai_func.message(AISelected.gemini)
-# async def text_gemini(message: types.Message, bot: Bot, session: AsyncSession):
-#     user_id = message.from_user.id
-#
-#
-#     if not await check_balance(session, user_id, 'gemini'):
-#         await message.answer(
-#             'К сожалению, у вас закончились токены.\n\n Пожалуйста, пополните счёт, и я с удовольствием выполню ваш запрос!',
-#             reply_markup=kbd_tk)
-#         return
-#
-#     stop_typing = asyncio.Event()
-#     typing_task = asyncio.create_task(send_typing_action(bot, message.chat.id, stop_typing))
-#     try:
-#         request = []
-#         add_info = []
-#
-#         # print(message)
-#
-#
-#         if message.photo:
-#             file_id = message.photo[-1].file_id
-#
-#             buffer = io.BytesIO()
-#
-#             await bot.download(file=file_id, destination=buffer)
-#             buffer.seek(0)
-#
-#             bytes  = buffer.read()
-#             add_info.append(bytes)
-#             add_info.append('image/jpeg')
-#
-#
-#             user_prompt = message.caption if message.caption else 'Опиши фото'
-#             request.append(user_prompt)
-#
-#         elif message.document:
-#             if message.document.mime_type not in permitted_gemini_docs:
-#                 await message.answer('Произошла ошибка(\nВозможно, отправленный файл не поддерживается')
-#                 stop_typing.set()
-#                 await typing_task
-#                 return
-#
-#             file_id = message.document.file_id
-#
-#             buffer = io.BytesIO()
-#
-#             await bot.download(file=file_id, destination=buffer)
-#             buffer.seek(0)
-#
-#             bytes = buffer.read()
-#             add_info.append(bytes)
-#             add_info.append(message.document.mime_type)
-#
-#             user_prompt = message.caption if message.caption else 'Что в документе'
-#             request.append(user_prompt)
-#
-#         elif message.video:
-#             if message.video.mime_type not in permitted_gemini_docs:
-#                 await message.answer('Произошла ошибка.\nВозможно, отправленный файл не поддерживается')
-#                 stop_typing.set()
-#                 await typing_task
-#                 return
-#
-#             file_id = message.video.file_id
-#
-#             buffer = io.BytesIO()
-#
-#             await bot.download(file=file_id, destination=buffer)
-#             buffer.seek(0)
-#
-#             bytes = buffer.read()
-#             add_info.append(bytes)
-#             add_info.append(message.video.mime_type)
-#
-#             user_prompt = message.caption if message.caption else ''
-#             request.append(user_prompt)
-#
-#         elif message.voice:
-#             if message.voice.mime_type not in permitted_gemini_docs:
-#                 await message.answer('Произошла ошибка.\nВозможно, отправленный файл не поддерживается')
-#                 stop_typing.set()
-#                 await typing_task
-#                 return
-#
-#             file_id = message.voice.file_id
-#
-#             buffer = io.BytesIO()
-#
-#             await bot.download(file=file_id, destination=buffer)
-#             buffer.seek(0)
-#
-#             bytes = buffer.read()
-#             add_info.append(bytes)
-#             add_info.append(message.voice.mime_type)
-#
-#             user_prompt = ''
-#             request.append(user_prompt)
-#
-#         elif message.text:
-#             request += [message.text]
-#             if request[0] == "/":
-#                 return
-#
-#         else:
-#             return
-#
-#         for attempt in range(5):
-#             try:
-#                 # Ваш запрос к Gemini API
-#                 ans = await gem_send_request(session, request, user_id, add_info)
-#                 if ans:
-#                     # Останавливаем typing
-#                     stop_typing.set()
-#                     await typing_task
-#                     break
-#             except ServerError as e:
-#                 print(e)
-#                 if attempt == 4:
-#                     await message.answer("К сожалению, сервис временно перегружен. Попробуйте позже или воспользуйтесь другой моделью.")
-#                     return
-#                 if e.code == 503:
-#                     await asyncio.sleep(2 ** attempt) # экспоненциальная задержка
-#
-#
-#
-#         chunks = await send_long_text(ans)
-#         for chunk in chunks:
-#             try:
-#                 await message.answer(chunk, parse_mode=ParseMode.MARKDOWN)
-#             except Exception as e:
-#                 print(e)
-#                 try:
-#                     await message.answer(chunk)
-#                 except Exception as e:
-#                     print(e)
-#                     await message.answer(chunk, parse_mode=None)
-#
-#         await use_model(session, user_id, 'gemini')
-#
-#     except Exception as e:
-#         stop_typing.set()
-#         await typing_task
-#         print(e)
-#         await message.answer("Произошла ошибка при обработке запроса. Пожалуйста, повторите попытку\nЕсли ошибка продолжает возникать, дайте нам знать @aitb_support")
-#
-#
-#
+@ai_func.message(AISelected.gemini, F.text == '🗑 Отчистить историю диалога')
+async def clear_history_gem(message: types.Message, session: AsyncSession):
+    await orm_delete_gemini_chat_history(session, message.from_user.id)
+    await message.answer('ℹ️ История диалога удалена, вы можете продолжать общение с ботом')
+
+@ai_func.message(AISelected.gemini)
+async def text_gemini(message: types.Message, bot: Bot, session: AsyncSession):
+    user_id = message.from_user.id
+
+
+    if not await check_balance(session, user_id, 'gemini'):
+        await message.answer(
+            'К сожалению, у вас закончились токены.\n\n Пожалуйста, пополните счёт, и я с удовольствием выполню ваш запрос!',
+            reply_markup=kbd_tk)
+        return
+
+    stop_typing = asyncio.Event()
+    typing_task = asyncio.create_task(send_typing_action(bot, message.chat.id, stop_typing))
+    try:
+        request = []
+        add_info = []
+
+        # print(message)
+
+
+        if message.photo:
+            file_id = message.photo[-1].file_id
+
+            buffer = io.BytesIO()
+
+            await bot.download(file=file_id, destination=buffer)
+            buffer.seek(0)
+
+            bytes  = buffer.read()
+            add_info.append(bytes)
+            add_info.append('image/jpeg')
+
+
+            prompt = message.caption if message.caption else 'Опиши фото'
+            request.append(prompt)
+
+        elif message.document:
+            if message.document.mime_type not in permitted_gemini_docs:
+                await message.answer('Произошла ошибка(\nВозможно, отправленный файл не поддерживается')
+                stop_typing.set()
+                await typing_task
+                return
+
+            file_id = message.document.file_id
+
+            buffer = io.BytesIO()
+
+            await bot.download(file=file_id, destination=buffer)
+            buffer.seek(0)
+
+            bytes = buffer.read()
+            add_info.append(bytes)
+            add_info.append(message.document.mime_type)
+
+            prompt = message.caption if message.caption else 'Что в документе'
+            request.append(prompt)
+
+        elif message.video:
+            if message.video.mime_type not in permitted_gemini_docs:
+                await message.answer('Произошла ошибка.\nВозможно, отправленный файл не поддерживается')
+                stop_typing.set()
+                await typing_task
+                return
+
+            file_id = message.video.file_id
+
+            buffer = io.BytesIO()
+
+            await bot.download(file=file_id, destination=buffer)
+            buffer.seek(0)
+
+            bytes = buffer.read()
+            add_info.append(bytes)
+            add_info.append(message.video.mime_type)
+
+            prompt = message.caption if message.caption else ''
+            request.append(prompt)
+
+        elif message.voice:
+            if message.voice.mime_type not in permitted_gemini_docs:
+                await message.answer('Произошла ошибка.\nВозможно, отправленный файл не поддерживается')
+                stop_typing.set()
+                await typing_task
+                return
+
+            file_id = message.voice.file_id
+
+            buffer = io.BytesIO()
+
+            await bot.download(file=file_id, destination=buffer)
+            buffer.seek(0)
+
+            bytes = buffer.read()
+            add_info.append(bytes)
+            add_info.append(message.voice.mime_type)
+
+            prompt = ''
+            request.append(prompt)
+
+        elif message.text:
+            prompt = message.text
+
+            if prompt == "/":
+                return
+
+        else:
+            return
+
+        for attempt in range(5):
+            try:
+                # Ваш запрос к Gemini API
+                ans = await gem_send_request(session, user_id, prompt, add_info)
+                if ans:
+                    # Останавливаем typing
+                    stop_typing.set()
+                    await typing_task
+                    break
+            except ServerError as e:
+                print(e)
+                if attempt == 4:
+                    await message.answer("К сожалению, сервис временно перегружен. Попробуйте позже или воспользуйтесь другой моделью.")
+                    return
+                if e.code == 503:
+                    await asyncio.sleep(2 ** attempt) # экспоненциальная задержка
+
+
+
+        chunks = await send_long_text(ans)
+        for chunk in chunks:
+            try:
+                await message.answer(chunk, parse_mode=ParseMode.MARKDOWN)
+            except Exception as e:
+                print(e)
+                try:
+                    await message.answer(chunk)
+                except Exception as e:
+                    print(e)
+                    await message.answer(chunk, parse_mode=None)
+
+        await use_model(session, user_id, 'gemini')
+
+    except Exception as e:
+        stop_typing.set()
+        await typing_task
+        print(e)
+        await message.answer("Произошла ошибка при обработке запроса. Пожалуйста, повторите попытку\nЕсли ошибка продолжает возникать, дайте нам знать @aitb_support")
+
+
+
 # @ai_func.message(AISelected.receipt)
 # async def get_receipt(message: types.Message, bot: Bot, session: AsyncSession):
 #     ans = None

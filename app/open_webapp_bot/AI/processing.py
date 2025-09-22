@@ -10,6 +10,12 @@ from app.open_webapp_bot.AI.database.orm_query import orm_get_balance, orm_updat
 
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 
+permitted_gemini_docs = ['application/pdf', 'application/x-javascript', 'text/javascript',
+                        'application/x-python', 'text/x-python', 'text/plain', 'text/html',
+                        'text/css', 'text/md', 'text/csv', 'text/xml', 'text/rtf', 'video/mp4','video/mpeg','video/mov', 'video/avi', 'video/x-flv',
+                        'video/mpg', 'video/webm', 'video/wmv', 'video/3gpp', 'image/png', 'image/jpeg', 'image/webp', 'image/heic', 'image/heif', 'audio/wav', 'audio/mp3', 'audio/aiff', 'audio/aac', 'audio/ogg', 'audio/flac']
+
+
 rate = {
     'gemini': 2,
     'perplexity': 8,
