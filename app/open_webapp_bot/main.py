@@ -9,6 +9,7 @@ import os
 from dotenv import load_dotenv
 
 from app.open_webapp_bot.AI.database.engine import session_maker, create_db
+from app.open_webapp_bot.AI.handlers.admin_handlers import admin_router
 from app.open_webapp_bot.AI.middlewares.db import DataBaseSession, HTTPSessionMiddleware
 from app.shared.yookassa_api import create_payment_link
 
@@ -23,6 +24,7 @@ WEBAPP_URL = os.getenv("WEBAPP_URL")
 bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher(storage=MemoryStorage())
 
+dp.include_router(admin_router)
 dp.include_router(ai_func)
 
 http_session = AiohttpSession()

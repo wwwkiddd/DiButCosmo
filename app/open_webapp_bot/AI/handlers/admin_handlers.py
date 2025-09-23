@@ -5,7 +5,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.testing import startswith_
+
 
 from app.open_webapp_bot.AI.database.clear_chats import clear_history_periodically
 from app.open_webapp_bot.AI.database.orm_query import orm_get_user_id, orm_get_user, orm_update_balance, \
