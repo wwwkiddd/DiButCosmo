@@ -12,7 +12,7 @@ from app.open_webapp_bot.AI.database.engine import session_maker, create_db
 from app.open_webapp_bot.AI.middlewares.db import DataBaseSession, HTTPSessionMiddleware
 from app.shared.yookassa_api import create_payment_link
 
-from app.open_webapp_bot.AI.AI_func import ai_func
+from app.open_webapp_bot.AI.handlers.AI_func import ai_func
 
 
 load_dotenv()

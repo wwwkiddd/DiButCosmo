@@ -22,7 +22,7 @@ from app.open_webapp_bot.AI.database.orm_query import orm_delete_gpt_chat_histor
 #
 from app.open_webapp_bot.AI.kbds.inline import get_callback_btns, kbd_tk
 from app.open_webapp_bot.AI.kbds.reply import main_kbd, get_keyboard
-from app.open_webapp_bot.AI.processing import check_balance, send_typing_action, get_image_for_ai, send_long_text, \
+from app.open_webapp_bot.AI.handlers.processing import check_balance, send_typing_action, get_image_for_ai, send_long_text, \
     use_model
 
 ai_func = Router()
