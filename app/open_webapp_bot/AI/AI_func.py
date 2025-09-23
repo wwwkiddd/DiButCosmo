@@ -1,5 +1,4 @@
 import asyncio
-import io
 import os
 
 
@@ -24,7 +23,7 @@ from app.open_webapp_bot.AI.database.orm_query import orm_delete_gpt_chat_histor
 from app.open_webapp_bot.AI.kbds.inline import get_callback_btns, kbd_tk
 from app.open_webapp_bot.AI.kbds.reply import main_kbd, get_keyboard
 from app.open_webapp_bot.AI.processing import check_balance, send_typing_action, get_image_for_ai, send_long_text, \
-    use_model, permitted_gemini_docs
+    use_model
 
 ai_func = Router()
 
@@ -203,18 +202,18 @@ GPT‑5 — это не просто чат‑бот, а универсальн�
 
     await state.set_state(AISelected.gpt_5)
 
-#
-# @ai_func.message(F.text == '👨‍🍳 Рецепты по фото')
-# async def work_with_receipt(message: types.Message, state: FSMContext):
-#     await message.delete()
-#
-#     await message.answer('✨ <b>Привет, я твой помощник по питанию!</b> ✨\n\n'
-#                          'Просто 📎 прикрепи к сообщению фото или отправь мне список продуктов, которые у тебя есть, и я составлю вкусные рецепты с указанием КБЖУ\n\n'
-#                          'В описании к фото или вместе со списком можешь написать дополнительные пожелания👨‍🍳 <i>(для набора массы для похудения и т.д.)</i>\n\n'
-#                          'Один запрос стоит 15 токенов')
-#
-#     await state.set_state(AISelected.receipt)
-#
+
+@ai_func.message(F.text == '👨‍🍳 Рецепты по фото')
+async def work_with_receipt(message: types.Message, state: FSMContext):
+    await message.delete()
+
+    await message.answer('✨ <b>Привет, я твой помощник по питанию!</b> ✨\n\n'
+                         'Просто 📎 прикрепи к сообщению фото или отправь мне список продуктов, которые у тебя есть, и я составлю вкусные рецепты с указанием КБЖУ\n\n'
+                         'В описании к фото или вместе со списком можешь написать дополнительные пожелания👨‍🍳 <i>(для набора массы для похудения и т.д.)</i>\n\n'
+                         'Один запрос стоит 15 токенов')
+
+    await state.set_state(AISelected.receipt)
+
 # ################################## For TEXT ####################################################################
 #
 
@@ -427,7 +426,7 @@ async def clear_history_ds(message: types.Message, session: AsyncSession):
     await message.answer('ℹ️ История диалога удалена, вы можете продолжать общение с ботом')
 
 @ai_func.message(AISelected.deepseek, F.text)
-async def text_deepseek(message: types.Message, bot: Bot, session: AsyncSession,  http_session: aiohttp.ClientSession):
+async def text_deepseek(message: types.Message, bot: Bot, session: AsyncSession):
     user_id = message.from_user.id
 
 
