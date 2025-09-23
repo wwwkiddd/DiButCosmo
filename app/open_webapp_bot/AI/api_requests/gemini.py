@@ -121,6 +121,7 @@ async def gem_send_request(session: AsyncSession, user_id: int, prompt: str = No
 
     elif add_info and add_info[-1] in permitted_gemini_docs:
         response = client.files.create(file=add_info[0], purpose="assistants")
+        print(response)
         file_id = response.data.id
 
         await orm_update_gemini_chat_history(session, [{
