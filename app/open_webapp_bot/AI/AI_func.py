@@ -12,6 +12,7 @@ from aiogram.types import FSInputFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.open_webapp_bot.AI.api_requests.deepseek import deepseek
+from app.open_webapp_bot.AI.api_requests.grok import grok_for_receipt
 from app.open_webapp_bot.AI.api_requests.open_ai import gpt_5
 from app.open_webapp_bot.AI.api_requests.perplexity import perp_send_request
 from app.open_webapp_bot.AI.database.orm_query import orm_delete_gpt_chat_history, orm_get_user, orm_add_user, \
@@ -472,81 +473,53 @@ async def text_deepseek(message: types.Message, bot: Bot, session: AsyncSession,
 
 
 
-# @ai_func.message(AISelected.receipt)
-# async def get_receipt(message: types.Message, bot: Bot, session: AsyncSession):
-#     ans = None
-#
-#     if await check_balance(session, message.from_user.id, 'receipt'):
-#         await message.answer("🧠 Обрабатываю, пожалуйста подождите...")
-#         await bot.send_chat_action(chat_id=message.chat.id, action='typing')
-#         if message.photo:
-#             file_id = message.photo[-1].file_id
-#
-#             buffer = io.BytesIO()
-#
-#             await bot.download(file=file_id, destination=buffer)
-#             buffer.seek(0)
-#
-#             bytes = buffer.read()
-#             add_info = (bytes, 'image/jpeg')
-#
-#             user_prompt = 'Ты помощник по питанию. Изучи фото определи какие продукты на нем, напиши рецепты блюд которые можно из низ приготовить, добавь КБЖУ для каждого блюда. В конце ответа не задавай вопросы'
-#             if message.caption:
-#                 user_prompt += message.caption
-#                 for attempt in range(5):
-#                     try:
-#                         # Ваш запрос к Gemini API
-#                         ans = await gem_receipt(user_prompt, add_info)
-#                         if ans:
-#                             break
-#                     except ServerError as e:
-#                         print(e)
-#                         if attempt == 4:
-#                             await message.answer(
-#                                 "К сожалению, сервис временно перегружен. Повторите попытку позже.")
-#                             return
-#                         if e.code == 503:
-#                             await asyncio.sleep(2 ** attempt)  # экспоненциальная задержка
-#
-#
-#         elif message.text:
-#             user_prompt = message.text + 'Ты помощник по питанию. Изучи список, напиши рецепты блюд которые можно из продуктов в нем приготовить, добавь КБЖУ для каждого блюда. В конце ответа не задавай вопросы'
-#         else:
-#             return
-#         for attempt in range(5):
-#             try:
-#                 # Ваш запрос к Gemini API
-#                 ans = await gem_receipt(user_prompt)
-#                 if ans:
-#                     break
-#             except ServerError as e:
-#                 print(e)
-#                 if attempt == 4:
-#                     await message.answer(
-#                         "К сожалению, сервис временно перегружен. Повторите попытку позже.")
-#                     return
-#                 if e.code == 503:
-#                     await asyncio.sleep(2 ** attempt)  # экспоненциальная задержка
-#
-#
-#
-#         chunks = await send_long_text(ans)
-#         for chunk in chunks:
-#             try:
-#                 await message.answer(chunk, parse_mode=ParseMode.MARKDOWN)
-#             except Exception as e:
-#                 print(e)
-#                 try:
-#                     await message.answer(chunk)
-#                 except Exception as e:
-#                     print(e)
-#                     await message.answer(chunk, parse_mode=None)
-#
-#         await use_model(session, message.from_user.id, 'receipt')
-#
-#     else:
-#         await message.answer('К сожалению, у вас закончились токены.\n\n Пожалуйста, пополните счёт, и я с удовольствием выполню ваш запрос!',
-#                              reply_markup=kbd_tk)
+@ai_func.message(AISelected.receipt)
+async def get_receipt(message: types.Message, bot: Bot, session: AsyncSession, http_session: aiohttp.ClientSession):
+    try:
+        user_id = message.from_user.id
+        if await check_balance(session, message.from_user.id, 'receipt'):
+            await message.answer("🧠 Обрабатываю, пожалуйста подождите...")
+            image = None
+            if message.photo:
+                image, file = await get_image_for_ai(bot, http_session, user_id=user_id,
+                                                     photo_id=message.photo[-1].file_id)
+                os.remove(file)
+
+                user_prompt = 'Ты помощник по питанию. Изучи фото определи какие продукты на нем, напиши рецепты блюд которые можно из низ приготовить, добавь КБЖУ для каждого блюда. В конце ответа не задавай вопросы'
+                if message.caption:
+                    user_prompt += message.caption
+
+            elif message.text:
+                user_prompt = message.text + 'Ты помощник по питанию. Изучи список, напиши рецепты блюд которые можно из продуктов в нем приготовить, добавь КБЖУ для каждого блюда. В конце ответа не задавай вопросы'
+            else:
+                return
+
+            ans = await grok_for_receipt(user_prompt, image)
+
+
+
+            chunks = await send_long_text(ans)
+            for chunk in chunks:
+                try:
+                    await message.answer(chunk, parse_mode=ParseMode.MARKDOWN)
+                except Exception as e:
+                    print(e)
+                    try:
+                        await message.answer(chunk)
+                    except Exception as e:
+                        print(e)
+                        await message.answer(chunk, parse_mode=None)
+
+            await use_model(session, message.from_user.id, 'receipt')
+
+        else:
+            await message.answer('К сожалению, у вас закончились токены.\n\n Пожалуйста, пополните счёт, и я с удовольствием выполню ваш запрос!',
+                                 reply_markup=kbd_tk)
+
+    except Exception as e:
+        print(e)
+        await message.answer("Произошла ошибка при обработке запроса. Пожалуйста, повторите попытку\nЕсли ошибка продолжает возникать, дайте нам знать @aitb_support")
+
 #
 # ######################################################################################################
 #
