@@ -2,7 +2,7 @@ import asyncio
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from orm_query import orm_clear_user_histories
+from app.open_webapp_bot.AI.database.orm_query import orm_clear_user_histories
 
 
 async def clear_history_periodically(session: AsyncSession):
