@@ -58,7 +58,8 @@ async def nano_banana(prompt: str, images: list = None,):
 
 
         image_out = response.choices[0].message.images[0]['image_url']['url']
-        image_bytes = base64.b64decode(image_out)
+        base64_str = image_out.split(",")[1]
+        image_bytes = base64.b64decode(base64_str)
 
 
         return image_bytes
