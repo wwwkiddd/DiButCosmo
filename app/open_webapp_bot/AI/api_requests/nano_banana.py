@@ -15,7 +15,7 @@ client = OpenAI(
 
 
 async def nano_banana(prompt: str, images: list = None,):
-
+    response = None
     if images:
         content = [
         {
@@ -23,12 +23,12 @@ async def nano_banana(prompt: str, images: list = None,):
           "text": prompt
         },]
         for image in images:
-
+            b64_image = base64.b64encode(image.read()).decode('utf-8')
             content.append(
                 {
                     "type": "image_url",
                     "image_url": {
-                        "url": f"data:image/jpeg;base64,{image}"
+                        "url": f"data:image/jpeg;base64,{b64_image}"
                     }
                 }
             )
