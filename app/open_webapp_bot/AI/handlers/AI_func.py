@@ -714,12 +714,17 @@ async def to_nano_banana(message: types.Message, bot: Bot, state: FSMContext, se
         del users_collages[user_id]
 
     await message.answer_document(input_file)
-    await message.answer_photo(photo=input_file, caption='Ваше изображение😌', reply_markup=get_callback_btns(btns={
-        '🔄 Повторить': 'repeat',
-        '✏️ Изменить': 'edit'
-    }))
-    await use_model(session, user_id, model)
-
+    try:
+        await message.answer_photo(photo=input_file, caption='Ваше изображение😌',
+                                   reply_markup=get_callback_btns(btns={
+                                       '🔄 Повторить': 'repeat',
+                                       '✏️ Редактировать': 'edit'
+                                   }))
+        await use_model(session, message.from_user.id, model)
+    except Exception as e:
+        print(e)
+        await message.answer(
+            'Возникла непредвиденная ошибка, пожалуйста, повторите попытку позже.\nЕсли ошибка продолжает возникать, дайте нам знать @aitb_support')
 
 
 @ai_func.callback_query(or_f(AISelected.image_adding, AISelected.image), F.data == 'repeat')
@@ -756,12 +761,19 @@ async def repeat_image(callback: types.CallbackQuery, state: FSMContext, session
         await state.set_state(AISelected.image)
 
         await callback.message.answer_document(input_file)
-        await callback.message.answer_photo(photo=input_file, caption='Ваше изображение😌', reply_markup=get_callback_btns(btns={
-            '🔄 Повторить': 'repeat',
-            '✏️ Изменить': 'edit'
-        }))
+        try:
+            await callback.message.answer_photo(photo=input_file, caption='Ваше изображение😌',
+                                       reply_markup=get_callback_btns(btns={
+                                           '🔄 Повторить': 'repeat',
+                                           '✏️ Редактировать': 'edit'
+                                       }))
+            await use_model(session, callback.message.from_user.id, model)
+        except Exception as e:
+            print(e)
+            await callback.message.answer(
+                'Возникла непредвиденная ошибка, пожалуйста, повторите попытку позже.\nЕсли ошибка продолжает возникать, дайте нам знать @aitb_support')
 
-        await use_model(session, user_id, model)
+
 
     else:
         await callback.message.answer(
@@ -801,10 +813,6 @@ async def editing(message: types.Message, state: FSMContext, bot: Bot, session: 
         image_out = await nano_banana(prompt, image)
         os.remove(file)
 
-    except BadRequestError as e:
-        if e.code == 'moderation_blocked':
-            await message.answer('🤖 К сожалению, я не могу создать это фото, так как запрос противоречит моей политике в отношении контента.')
-        return
     except Exception as e:
         print(e)
         await message.answer('Возникла непредвиденная ошибка, пожалуйста, повторите попытку позже.\nЕсли ошибка продолжает возникать, дайте нам знать @aitb_support')
@@ -816,13 +824,19 @@ async def editing(message: types.Message, state: FSMContext, bot: Bot, session: 
     await state.set_state(AISelected.image)
 
     await message.answer_document(input_file)
-    await message.answer_photo(photo=input_file, caption='Ваше изображение😌',
+    try:
+        await message.answer_photo(photo=input_file, caption='Ваше изображение😌',
                                         reply_markup=get_callback_btns(btns={
                                             '🔄 Повторить': 'repeat',
                                             '✏️ Редактировать': 'edit'
                                         }))
+        await use_model(session, message.from_user.id, model)
+    except Exception as e:
+        print(e)
+        await message.answer('Возникла непредвиденная ошибка, пожалуйста, повторите попытку позже.\nЕсли ошибка продолжает возникать, дайте нам знать @aitb_support')
 
-    await use_model(session, message.from_user.id, model)
+
+
 
 
 
