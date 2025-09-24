@@ -5,13 +5,16 @@ import os
 from aiogram import Router, F, types, Bot
 from aiogram.client.session import aiohttp
 from aiogram.enums import ParseMode
+from aiogram.filters import or_f
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
-from aiogram.types import FSInputFile
+from aiogram.types import FSInputFile, BufferedInputFile
+from openai import BadRequestError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.open_webapp_bot.AI.api_requests.deepseek import deepseek
 from app.open_webapp_bot.AI.api_requests.grok import grok_for_receipt
+from app.open_webapp_bot.AI.api_requests.nano_banana import nano_banana
 from app.open_webapp_bot.AI.api_requests.open_ai import gpt_5
 from app.open_webapp_bot.AI.api_requests.perplexity import perp_send_request
 from app.open_webapp_bot.AI.database.orm_query import orm_delete_gpt_chat_history, orm_get_user, orm_add_user, \
@@ -145,21 +148,20 @@ async def enter_to_perplexity(callback: types.CallbackQuery, state: FSMContext):
 #                                   reply_markup=get_keyboard('🗑 Отчистить историю диалога'))
 #
 #     await state.set_state(AISelected.sonar_deep_research)
-#
-#
-# @ai_func.message(F.text == '🖼️ Изображения')
-# async def work_with_image(message: types.Message, state: FSMContext):
-#     await message.delete()
-#
-#     photo = FSInputFile('./files/gpt_ability.jpg')
-#     await message.answer_photo(photo=photo, caption='✨ <b>Создавайте и редактируйте фото прямо в чате!</b> ✨\n\n'
-#                                                     'Чтобы начать, отправьте изображения (от 1 до 10), которое(ые) вы хотите изменить, и напишите запрос или просто напишите в чат, что нужно создать\n\n'
-#                                                     'Генерация изображения по запросу - 40 токенов\n'
-#                                                     'Обработка вашего фото - 70 токенов ')
-#
-#     await state.set_state(AISelected.image)
-#
-#
+
+
+@ai_func.message(F.text == '🖼️ Изображения')
+async def work_with_image(message: types.Message, state: FSMContext):
+    await message.delete()
+
+    await message.answer('✨ <b>Создавайте и редактируйте фото прямо в чате!</b> ✨\n\n'
+                                                    'Чтобы начать, отправьте изображения (от 1 до 10), которое(ые) вы хотите изменить, и напишите запрос или просто напишите в чат, что нужно создать\n\n'
+                                                    'Генерация изображения по запросу - 40 токенов\n'
+                                                    'Обработка вашего фото - 70 токенов ')
+
+    await state.set_state(AISelected.image)
+
+
 # @ai_func.message(F.text == '🎬 Видео')
 # async def work_with_image(message: types.Message, state: FSMContext):
 #     await message.delete()
@@ -524,309 +526,308 @@ async def get_receipt(message: types.Message, bot: Bot, session: AsyncSession, h
 #
 #
 # ################################## IMAGE #############################################################
-#
-# users_collages = {}
-#
-# # не срабатывают callback кнопки
-# # при нажатии изменить или
-# # раздельной отправке не учитывает фото +
-# @ai_func.message(AISelected.image_adding, F.text)
-# async def image_adding_gpt(message: types.Message, state: FSMContext, session: AsyncSession):
-#     prompt = message.text
-#     data = await state.get_data()
-#     key = data['image_adding']
-#     model = 'img2img'
-#     images = users_collages[key]
-#     print(images)
-#
-#     try:
-#         await message.answer("🧠 Обрабатываю, пожалуйста подождите.\nГенерация займет 2-3 минуты...\nПожалуйста, не переходите в другой режим пока не закончится генерация")
-#         image_out = await gpt_edit_photo(users_collages[key], prompt)
-#     except BadRequestError as e:
-#         print(e)
-#         if e.code == 'moderation_blocked':
-#             await message.answer(
-#                 '🤖 К сожалению, я не могу создать это фото, так как запрос противоречит моей политике в отношении контента.')
-#             del users_collages[key]
-#             await state.set_state(AISelected.image)
-#         return
-#     except Exception as e:
-#         print(e)
-#         await message.answer('Возникла непредвиденная ошибка, пожалуйста, повторите попытку позже.\nЕсли ошибка продолжает возникать, дайте нам знать @aitb_support')
-#         return
-#
-#     del users_collages[key]
-#     await state.update_data(image=(prompt, images, image_out, model))
-#     input_file = BufferedInputFile(file=image_out, filename="gpt_image.jpeg")
-#
-#     await state.set_state(AISelected.image)
-#
-#     await message.answer_document(input_file)
-#     await message.answer_photo(photo=input_file, caption='Ваше изображение😌', reply_markup=get_callback_btns(btns={
-#         '🔄 Повторить': 'repeat',
-#         '✏️ Изменить': 'edit'
-#     }))
-#
-#     await use_model(session, message.from_user.id, model)
-#
-#
-#
-#
-# @ai_func.message(or_f(AISelected.image, AISelected.image_adding))
-# async def to_gpt(message: types.Message, bot: Bot, state: FSMContext, session: AsyncSession, http_session: aiohttp.ClientSession):
-#     model = 'img2img'
-#     user_id = message.from_user.id
-#
-#     if message.document:
-#         await message.answer('Пожалуйста, отправьте фото другим способом')
-#         return
-#
-#     await state.update_data(image=None)
-#
-#
-#     images = []
-#
-# # случай если медиа группа с описанием
-#     if message.media_group_id:
-#         if await check_balance(session, user_id, model):
-#             key  = user_id
-#             if key not in users_collages:
-#                 users_collages[key] = []
-#
-#
-#
-#             image, file = await get_image_for_gpt(bot, http_session, user_id=user_id, photo_id=message.photo[-1].file_id)
-#             users_collages[key].append(image)
-#             await state.update_data(image_adding=key)
-#             await state.set_state(AISelected.image_adding)
-#
-#             if message.caption:
-#                 prompt = message.caption
-#             else:
-#                  return
-#
-#
-#             try:
-#                 await message.answer("🧠 Обрабатываю, пожалуйста подождите.\nГенерация займет 2-3 минуты...\nПожалуйста, не переходите в другой режим пока не закончится генерация")
-#                 image_out = await gpt_edit_photo(users_collages[key], prompt)
-#                 os.remove(file)
-#             except BadRequestError as e:
-#                 print(e)
-#                 if e.code == 'moderation_blocked':
-#                     await message.answer('🤖 К сожалению, я не могу создать это фото, так как запрос противоречит моей политике в отношении контента.')
-#                 return
-#             except Exception as e:
-#                 print(e)
-#                 await message.answer('Возникла непредвиденная ошибка, пожалуйста, повторите попытку позже.\n Если ошибка продолжает возникать, дайте нам знать @aitb_support')
-#                 return
-#
-#         else:
-#             await message.answer(
-#                 'К сожалению, у вас закончились токены.\n\n Пожалуйста, пополните счёт, и я с удовольствием выполню ваш запрос!',
-#                 reply_markup=kbd_tk)
-#             return
-#
-# #######
-#
-#     elif message.caption and message.photo:
-#         if await check_balance(session, user_id, model):
-#             image, file = await get_image_for_gpt(bot, http_session, user_id=user_id, photo_id=message.photo[-1].file_id)
-#             images.append(image)
-#             prompt = message.caption
-#
-#
-#
-#             try:
-#                 await message.answer("🧠 Обрабатываю, пожалуйста подождите.\nГенерация займет 2-3 минуты...")
-#                 image_out = await gpt_edit_photo(images, prompt)
-#                 os.remove(file)
-#
-#             except BadRequestError as e:
-#                 print(e)
-#                 if e.code == 'moderation_blocked':
-#                     await message.answer('🤖 К сожалению, я не могу создать это фото, так как запрос противоречит моей политике в отношении контента.')
-#                 return
-#             except Exception as e:
-#                 print(e)
-#                 await message.answer('Возникла непредвиденная ошибка, пожалуйста, повторите попытку позже.\nЕсли ошибка продолжает возникать, дайте нам знать @aitb_support')
-#                 return
-#
-#         else:
-#             await message.answer(
-#                 'К сожалению, у вас закончились токены.\n\n Пожалуйста, пополните счёт, и я с удовольствием выполню ваш запрос!',
-#                 reply_markup=kbd_tk)
-#             return
-#
-#     elif message.photo:
-#         if await check_balance(session, user_id, model):
-#             key = user_id
-#
-#
-#             users_collages[key] = []
-#
-#
-#             image, file = await get_image_for_gpt(bot, http_session, user_id=user_id, photo_id=message.photo[-1].file_id)
-#             users_collages[key].append(image)
-#             os.remove(file)
-#
-#             await state.update_data(image_adding=key)
-#             await state.set_state(AISelected.image_adding)
-#             await message.answer('Отлично! Теперь напиши, что сделать с этим фото...')
-#             return
-#
-#         else:
-#             await message.answer(
-#                 'К сожалению, у вас закончились токены.\n\n Пожалуйста, пополните счёт, и я с удовольствием выполню ваш запрос!',
-#                 reply_markup=kbd_tk)
-#             return
-#
-#
-#     elif message.text:
-#         model = 'img2txt'
-#         if await check_balance(session, user_id, model):
-#
-#             try:
-#                 prompt = message.text
-#                 await message.answer("🧠 Обрабатываю, пожалуйста подождите.\nГенерация займет 2-3 минуты...")
-#                 image_out = await gpt_create_photo(prompt)
-#             except BadRequestError as e:
-#                 if e.code == 'moderation_blocked':
-#                     await message.answer('🤖 К сожалению, я не могу создать это фото, так как запрос противоречит моей политике в отношении контента.')
-#                 return
-#             except Exception as e:
-#                 print(e)
-#                 await message.answer('Возникла непредвиденная ошибка, пожалуйста, повторите попытку позже.\nЕсли ошибка продолжает возникать, дайте нам знать @aitb_support')
-#                 return
-#
-#         else:
-#             await message.answer(
-#                 'К сожалению, у вас закончились токены.\n\n Пожалуйста, пополните счёт, и я с удовольствием выполню ваш запрос!',
-#                 reply_markup=kbd_tk)
-#             return
-#     else:
-#         return
-#
-#     await state.update_data(image=(prompt, images, image_out, model))
-#     input_file = BufferedInputFile(file=image_out, filename="gpt_image.jpeg")
-#     if user_id in users_collages:
-#         del users_collages[user_id]
-#
-#     await message.answer_document(input_file)
-#     await message.answer_photo(photo=input_file, caption='Ваше изображение😌', reply_markup=get_callback_btns(btns={
-#         '🔄 Повторить': 'repeat',
-#         '✏️ Изменить': 'edit'
-#     }))
-#     await use_model(session, user_id, model)
-#
-#
-#
-# @ai_func.callback_query(or_f(AISelected.image_adding, AISelected.image), F.data == 'repeat')
-# async def repeat_image_gpt(callback: types.CallbackQuery, state: FSMContext, session: AsyncSession):
-#     print('in_repeat')
-#     await callback.answer()
-#     data = await state.get_data()
-#     images = data['image'][1]
-#     prompt =data['image'][0]
-#     model = data['image'][-1]
-#     # print(images, prompt, model)
-#     user_id = callback.from_user.id
-#
-#     if await check_balance(session, user_id, model):
-#
-#         await callback.message.answer("🧠 Обрабатываю, пожалуйста подождите.\nГенерация займет 2-3 минуты...")
-#         try:
-#             if images:
-#                 image_out = await gpt_edit_photo(images, prompt)
-#             else:
-#                 image_out = await gpt_create_photo(prompt)
-#         except BadRequestError as e:
-#             if e.code == 'moderation_blocked':
-#                 await callback.message.answer(
-#                     '🤖 К сожалению, я не могу создать это фото, так как запрос противоречит моей политике в отношении контента.')
-#             return
-#         except Exception as e:
-#             print(e)
-#             await callback.message.answer('Возникла непредвиденная ошибка, пожалуйста, повторите попытку позже.\nЕсли ошибка продолжает возникать, дайте нам знать @aitb_support')
-#             return
-#
-#         await state.update_data(image=(prompt, images, image_out, model))
-#         input_file = BufferedInputFile(file=image_out, filename="gpt_image.jpeg")
-#         await state.set_state(AISelected.image)
-#
-#         await callback.message.answer_document(input_file)
-#         await callback.message.answer_photo(photo=input_file, caption='Ваше изображение😌', reply_markup=get_callback_btns(btns={
-#             '🔄 Повторить': 'repeat',
-#             '✏️ Изменить': 'edit'
-#         }))
-#
-#         await use_model(session, user_id, model)
-#
-#     else:
-#         await callback.message.answer(
-#             'К сожалению, у вас закончились токены.\n\n Пожалуйста, пополните счёт, и я с удовольствием выполню ваш запрос!',
-#             reply_markup=kbd_tk)
-#
-#
-#
-# @ai_func.callback_query(or_f(AISelected.image_adding, AISelected.image), F.data == 'edit')
-# async def enter_edit_gpt(callback: types.CallbackQuery, state: FSMContext, session: AsyncSession):
-#     if await check_balance(session, callback.from_user.id, 'img2img'):
-#         print('editing')
-#         await callback.answer()
-#         await callback.message.answer("Что бы вы хотели изменить?")
-#         await state.set_state(AISelected.image_editing)
-#
-#     else:
-#         await callback.message.answer(
-#             'К сожалению, у вас закончились токены.\n\n Пожалуйста, пополните счёт, и я с удовольствием выполню ваш запрос!',
-#             reply_markup=kbd_tk)
-#
-#
-#
-# @ai_func.message(AISelected.image_editing, F.text)
-# async def editing_gpt(message: types.Message, state: FSMContext, bot: Bot, session: AsyncSession, http_session: aiohttp.ClientSession):
-#
-#     #реализовать добавление фото
-#     model = 'img2img'
-#     prompt = message.text
-#     data = await state.get_data()
-#     image_bytes = data['image'][-2]
-#     image, file = await get_image_for_gpt(bot, http_session, user_id=message.from_user.id, photo_bytes=image_bytes)
-#     print(image)
-#
-#     await message.answer("🧠 Обрабатываю, пожалуйста подождите.\nГенерация займет 2-3 минуты...")
-#     try:
-#         image_out = await gpt_edit_photo(image, prompt)
-#         os.remove(file)
-#
-#     except BadRequestError as e:
-#         if e.code == 'moderation_blocked':
-#             await message.answer('🤖 К сожалению, я не могу создать это фото, так как запрос противоречит моей политике в отношении контента.')
-#         return
-#     except Exception as e:
-#         print(e)
-#         await message.answer('Возникла непредвиденная ошибка, пожалуйста, повторите попытку позже.\nЕсли ошибка продолжает возникать, дайте нам знать @aitb_support')
-#         return
-#
-#     await state.update_data(image=(prompt, image, image_out, model))
-#     input_file = BufferedInputFile(file=image_out, filename="gpt_image.jpeg")
-#
-#     await state.set_state(AISelected.image)
-#
-#     await message.answer_document(input_file)
-#     await message.answer_photo(photo=input_file, caption='Ваше изображение😌',
-#                                         reply_markup=get_callback_btns(btns={
-#                                             '🔄 Повторить': 'repeat',
-#                                             '✏️ Редактировать': 'edit'
-#                                         }))
-#
-#     await use_model(session, message.from_user.id, model)
-#
-#
-#
-#
-#
-#
+
+users_collages = {}
+
+# не срабатывают callback кнопки
+# при нажатии изменить или
+# раздельной отправке не учитывает фото +
+@ai_func.message(AISelected.image_adding, F.text)
+async def image_adding_gpt(message: types.Message, state: FSMContext, session: AsyncSession):
+    prompt = message.text
+    data = await state.get_data()
+    key = data['image_adding']
+    model = 'img2img'
+    images = users_collages[key]
+    print(images)
+
+    try:
+        await message.answer("🧠 Обрабатываю, пожалуйста подождите.\nГенерация займет 2-3 минуты...\nПожалуйста, не переходите в другой режим пока не закончится генерация")
+        image_out = await nano_banana(users_collages[key], prompt)
+    except BadRequestError as e:
+        print(e)
+        if e.code == 'moderation_blocked':
+            await message.answer(
+                '🤖 К сожалению, я не могу создать это фото, так как запрос противоречит моей политике в отношении контента.')
+            del users_collages[key]
+            await state.set_state(AISelected.image)
+        return
+    except Exception as e:
+        print(e)
+        await message.answer('Возникла непредвиденная ошибка, пожалуйста, повторите попытку позже.\nЕсли ошибка продолжает возникать, дайте нам знать @aitb_support')
+        return
+
+    del users_collages[key]
+    await state.update_data(image=(prompt, images, image_out, model))
+    input_file = BufferedInputFile(file=image_out, filename="your_image.jpeg")
+
+    await state.set_state(AISelected.image)
+
+    await message.answer_document(input_file)
+    await message.answer_photo(photo=input_file, caption='Ваше изображение😌', reply_markup=get_callback_btns(btns={
+        '🔄 Повторить': 'repeat',
+        '✏️ Изменить': 'edit'
+    }))
+
+    await use_model(session, message.from_user.id, model)
+
+
+
+
+@ai_func.message(or_f(AISelected.image, AISelected.image_adding))
+async def to_nano_banana(message: types.Message, bot: Bot, state: FSMContext, session: AsyncSession, http_session: aiohttp.ClientSession):
+    model = 'img2img'
+    user_id = message.from_user.id
+
+    if message.document:
+        await message.answer('Пожалуйста, отправьте фото другим способом')
+        return
+
+    await state.update_data(image=None)
+
+
+    images = []
+
+# случай если медиа группа с описанием
+    if message.media_group_id:
+        if await check_balance(session, user_id, model):
+            key  = user_id
+            if key not in users_collages:
+                users_collages[key] = []
+
+
+
+            image, file = await get_image_for_ai(bot, http_session, user_id=user_id, photo_id=message.photo[-1].file_id)
+            users_collages[key].append(image)
+            await state.update_data(image_adding=key)
+            await state.set_state(AISelected.image_adding)
+
+            if message.caption:
+                prompt = message.caption
+            else:
+                 return
+
+
+            try:
+                await message.answer("🧠 Обрабатываю, пожалуйста подождите.\nГенерация займет 2-3 минуты...\nПожалуйста, не переходите в другой режим пока не закончится генерация")
+                image_out = await nano_banana(prompt, users_collages[key])
+                os.remove(file)
+            except BadRequestError as e:
+                print(e)
+                if e.code == 'moderation_blocked':
+                    await message.answer('🤖 К сожалению, я не могу создать это фото, так как запрос противоречит моей политике в отношении контента.')
+                return
+            except Exception as e:
+                print(e)
+                await message.answer('Возникла непредвиденная ошибка, пожалуйста, повторите попытку позже.\n Если ошибка продолжает возникать, дайте нам знать @aitb_support')
+                return
+
+        else:
+            await message.answer(
+                'К сожалению, у вас закончились токены.\n\n Пожалуйста, пополните счёт, и я с удовольствием выполню ваш запрос!',
+                reply_markup=kbd_tk)
+            return
+
+#случай когда фото с описанием
+
+    elif message.caption and message.photo:
+        if await check_balance(session, user_id, model):
+            image, file = await get_image_for_ai(bot, http_session, user_id=user_id, photo_id=message.photo[-1].file_id)
+            images.append(image)
+            prompt = message.caption
+
+
+
+            try:
+                await message.answer("🧠 Обрабатываю, пожалуйста подождите.\nГенерация займет 2-3 минуты...")
+                image_out = await nano_banana(prompt, images)
+                os.remove(file)
+
+            except BadRequestError as e:
+                print(e)
+                if e.code == 'moderation_blocked':
+                    await message.answer('🤖 К сожалению, я не могу создать это фото, так как запрос противоречит моей политике в отношении контента.')
+                return
+            except Exception as e:
+                print(e)
+                await message.answer('Возникла непредвиденная ошибка, пожалуйста, повторите попытку позже.\nЕсли ошибка продолжает возникать, дайте нам знать @aitb_support')
+                return
+
+        else:
+            await message.answer(
+                'К сожалению, у вас закончились токены.\n\n Пожалуйста, пополните счёт, и я с удовольствием выполню ваш запрос!',
+                reply_markup=kbd_tk)
+            return
+
+    elif message.photo:
+        if await check_balance(session, user_id, model):
+            key = user_id
+
+
+            users_collages[key] = []
+
+
+            image, file = await get_image_for_ai(bot, http_session, user_id=user_id, photo_id=message.photo[-1].file_id)
+            users_collages[key].append(image)
+            os.remove(file)
+
+            await state.update_data(image_adding=key)
+            await state.set_state(AISelected.image_adding)
+            await message.answer('Отлично! Теперь напиши, что сделать с этим фото...')
+            return
+
+        else:
+            await message.answer(
+                'К сожалению, у вас закончились токены.\n\n Пожалуйста, пополните счёт, и я с удовольствием выполню ваш запрос!',
+                reply_markup=kbd_tk)
+            return
+
+
+    elif message.text:
+        model = 'img2txt'
+        if await check_balance(session, user_id, model):
+
+            try:
+                prompt = message.text
+                await message.answer("🧠 Обрабатываю, пожалуйста подождите.\nГенерация займет 2-3 минуты...")
+                image_out = await nano_banana(prompt)
+            except BadRequestError as e:
+                if e.code == 'moderation_blocked':
+                    await message.answer('🤖 К сожалению, я не могу создать это фото, так как запрос противоречит моей политике в отношении контента.')
+                return
+            except Exception as e:
+                print(e)
+                await message.answer('Возникла непредвиденная ошибка, пожалуйста, повторите попытку позже.\nЕсли ошибка продолжает возникать, дайте нам знать @aitb_support')
+                return
+
+        else:
+            await message.answer(
+                'К сожалению, у вас закончились токены.\n\n Пожалуйста, пополните счёт, и я с удовольствием выполню ваш запрос!',
+                reply_markup=kbd_tk)
+            return
+    else:
+        return
+
+    await state.update_data(image=(prompt, images, image_out, model))
+    input_file = BufferedInputFile(file=image_out, filename="your_image.jpeg")
+    if user_id in users_collages:
+        del users_collages[user_id]
+
+    await message.answer_document(input_file)
+    await message.answer_photo(photo=input_file, caption='Ваше изображение😌', reply_markup=get_callback_btns(btns={
+        '🔄 Повторить': 'repeat',
+        '✏️ Изменить': 'edit'
+    }))
+    await use_model(session, user_id, model)
+
+
+
+@ai_func.callback_query(or_f(AISelected.image_adding, AISelected.image), F.data == 'repeat')
+async def repeat_image_gpt(callback: types.CallbackQuery, state: FSMContext, session: AsyncSession):
+    print('in_repeat')
+    await callback.answer()
+    data = await state.get_data()
+    images = data['image'][1]
+    prompt =data['image'][0]
+    model = data['image'][-1]
+    # print(images, prompt, model)
+    user_id = callback.from_user.id
+
+    if await check_balance(session, user_id, model):
+
+        await callback.message.answer("🧠 Обрабатываю, пожалуйста подождите.\nГенерация займет 2-3 минуты...")
+
+        try:
+                image_out = await nano_banana(prompt, images)
+        except BadRequestError as e:
+            if e.code == 'moderation_blocked':
+                await callback.message.answer(
+                    '🤖 К сожалению, я не могу создать это фото, так как запрос противоречит моей политике в отношении контента.')
+            return
+
+        except Exception as e:
+            print(e)
+            await callback.message.answer('Возникла непредвиденная ошибка, пожалуйста, повторите попытку позже.\nЕсли ошибка продолжает возникать, дайте нам знать @aitb_support')
+            return
+
+        await state.update_data(image=(prompt, images, image_out, model))
+        input_file = BufferedInputFile(file=image_out, filename="your_image.jpeg")
+        await state.set_state(AISelected.image)
+
+        await callback.message.answer_document(input_file)
+        await callback.message.answer_photo(photo=input_file, caption='Ваше изображение😌', reply_markup=get_callback_btns(btns={
+            '🔄 Повторить': 'repeat',
+            '✏️ Изменить': 'edit'
+        }))
+
+        await use_model(session, user_id, model)
+
+    else:
+        await callback.message.answer(
+            'К сожалению, у вас закончились токены.\n\n Пожалуйста, пополните счёт, и я с удовольствием выполню ваш запрос!',
+            reply_markup=kbd_tk)
+
+
+
+@ai_func.callback_query(or_f(AISelected.image_adding, AISelected.image), F.data == 'edit')
+async def enter_edit_gpt(callback: types.CallbackQuery, state: FSMContext, session: AsyncSession):
+    if await check_balance(session, callback.from_user.id, 'img2img'):
+        print('editing')
+        await callback.answer()
+        await callback.message.answer("Что бы вы хотели изменить?")
+        await state.set_state(AISelected.image_editing)
+
+    else:
+        await callback.message.answer(
+            'К сожалению, у вас закончились токены.\n\n Пожалуйста, пополните счёт, и я с удовольствием выполню ваш запрос!',
+            reply_markup=kbd_tk)
+
+
+
+@ai_func.message(AISelected.image_editing, F.text)
+async def editing_gpt(message: types.Message, state: FSMContext, bot: Bot, session: AsyncSession, http_session: aiohttp.ClientSession):
+
+    #реализовать добавление фото
+    model = 'img2img'
+    prompt = message.text
+    data = await state.get_data()
+    image_bytes = data['image'][-2]
+    image, file = await get_image_for_ai(bot, http_session, user_id=message.from_user.id, photo_bytes=image_bytes)
+    print(image)
+
+    await message.answer("🧠 Обрабатываю, пожалуйста подождите.\nГенерация займет 2-3 минуты...")
+    try:
+        image_out = await nano_banana(prompt, image)
+        os.remove(file)
+
+    except BadRequestError as e:
+        if e.code == 'moderation_blocked':
+            await message.answer('🤖 К сожалению, я не могу создать это фото, так как запрос противоречит моей политике в отношении контента.')
+        return
+    except Exception as e:
+        print(e)
+        await message.answer('Возникла непредвиденная ошибка, пожалуйста, повторите попытку позже.\nЕсли ошибка продолжает возникать, дайте нам знать @aitb_support')
+        return
+
+    await state.update_data(image=(prompt, image, image_out, model))
+    input_file = BufferedInputFile(file=image_out, filename="your_image.jpeg")
+
+    await state.set_state(AISelected.image)
+
+    await message.answer_document(input_file)
+    await message.answer_photo(photo=input_file, caption='Ваше изображение😌',
+                                        reply_markup=get_callback_btns(btns={
+                                            '🔄 Повторить': 'repeat',
+                                            '✏️ Редактировать': 'edit'
+                                        }))
+
+    await use_model(session, message.from_user.id, model)
+
+
+
+
+
+
 # ######################################################################################################
 #
 #

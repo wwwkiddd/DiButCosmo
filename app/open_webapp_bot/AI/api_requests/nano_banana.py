@@ -7,36 +7,37 @@ from openai import OpenAI
 
 API = os.getenv('API_GPT')
 
+
 client = OpenAI(
   base_url="https://openrouter.ai/api/v1",
   api_key=API,
 )
 
-async def grok_for_receipt(prompt: str = None, image = None,):
-    print('grok')
-    if image:
-        print('its_image')
-        b64_image = base64.b64encode(image.read()).decode('utf-8')
-        print('yes')
 
-    if image and prompt:
-        request = [{
-            "role": "user",
-            "content": [
+async def nano_banana(prompt: str, images: list = None,):
+    if images:
+        content = [
         {
           "type": "text",
           "text": prompt
-        },
-        {
-          "type": "image_url",
-          "image_url": {
-            "url": f"data:image/jpeg;base64,{b64_image}"
-          }
-        }
-      ]
-        }]
+        },]
+        for image in images:
+            b64_image = base64.b64encode(image.read()).decode('utf-8')
+            content.append(
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/jpeg;base64,{b64_image}"
+                    }
+                }
+            )
 
-        print('image and text')
+            print('yes')
+
+        request = [{
+            "role": "user",
+            "content": content},
+        ]
 
     else:
         request = [{
@@ -51,11 +52,11 @@ async def grok_for_receipt(prompt: str = None, image = None,):
 
         response = await asyncio.to_thread(
             client.chat.completions.create,
-            model="x-ai/grok-4-fast:free",
+            model="google/gemini-2.5-flash-image-preview",
             messages=request
         )
 
-        print(response)
+        print(response.choices[0].message.content)
         ans = response.choices[0].message.content
 
 
