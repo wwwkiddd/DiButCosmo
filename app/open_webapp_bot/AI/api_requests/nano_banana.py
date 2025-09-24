@@ -26,9 +26,9 @@ async def nano_banana(prompt: str, images: list = None,):
             b64_image = base64.b64encode(image.read()).decode('utf-8')
             content.append(
                 {
-                    "type": "image",
-                    "image": {
-                        "base64": f"data:image/jpeg;base64,{b64_image}"
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/jpeg;base64,{b64_image}"
                     }
                 }
             )
