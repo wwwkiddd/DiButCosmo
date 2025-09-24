@@ -690,7 +690,7 @@ async def to_nano_banana(message: types.Message, bot: Bot, state: FSMContext, se
             try:
                 prompt = message.text
                 await message.answer("🧠 Обрабатываю, пожалуйста подождите.\nГенерация займет 2-3 минуты...")
-                image_out, ans = await nano_banana(prompt)
+                image_out = await nano_banana(prompt)
             except BadRequestError as e:
                 if e.code == 'moderation_blocked':
                     await message.answer('🤖 К сожалению, я не могу создать это фото, так как запрос противоречит моей политике в отношении контента.')
@@ -714,7 +714,7 @@ async def to_nano_banana(message: types.Message, bot: Bot, state: FSMContext, se
         del users_collages[user_id]
 
     await message.answer_document(input_file)
-    await message.answer_photo(photo=input_file, caption=ans, reply_markup=get_callback_btns(btns={
+    await message.answer_photo(photo=input_file, caption='Ваше изображение😌', reply_markup=get_callback_btns(btns={
         '🔄 Повторить': 'repeat',
         '✏️ Изменить': 'edit'
     }))
