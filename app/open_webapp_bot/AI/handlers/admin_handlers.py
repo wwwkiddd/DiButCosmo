@@ -29,7 +29,7 @@ class AdminState(StatesGroup):
 
 @admin_router.message(Command('admin'))
 async def enter_admin(message: types.Message):
-    await message.answer('Здравствуй, мой админ что ты хочешь сделать сегодня?', reply_markup=get_callback_btns(btns={
+    await message.answer('Здравствуй, мой админ, что ты хочешь сделать сегодня?', reply_markup=get_callback_btns(btns={
         'Установить таймер': 'set_timer',
         'Дать токенов': 'give_tk',
         'Промокоды': 'admin_promo_code',

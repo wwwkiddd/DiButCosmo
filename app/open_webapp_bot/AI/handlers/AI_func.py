@@ -723,7 +723,7 @@ async def to_nano_banana(message: types.Message, bot: Bot, state: FSMContext, se
 
 
 @ai_func.callback_query(or_f(AISelected.image_adding, AISelected.image), F.data == 'repeat')
-async def repeat_image_gpt(callback: types.CallbackQuery, state: FSMContext, session: AsyncSession):
+async def repeat_image(callback: types.CallbackQuery, state: FSMContext, session: AsyncSession):
     print('in_repeat')
     await callback.answer()
     data = await state.get_data()
@@ -732,6 +732,7 @@ async def repeat_image_gpt(callback: types.CallbackQuery, state: FSMContext, ses
     model = data['image'][-1]
     # print(images, prompt, model)
     user_id = callback.from_user.id
+
 
     if await check_balance(session, user_id, model):
 
@@ -770,7 +771,7 @@ async def repeat_image_gpt(callback: types.CallbackQuery, state: FSMContext, ses
 
 
 @ai_func.callback_query(or_f(AISelected.image_adding, AISelected.image), F.data == 'edit')
-async def enter_edit_gpt(callback: types.CallbackQuery, state: FSMContext, session: AsyncSession):
+async def enter_edit(callback: types.CallbackQuery, state: FSMContext, session: AsyncSession):
     if await check_balance(session, callback.from_user.id, 'img2img'):
         print('editing')
         await callback.answer()
@@ -785,7 +786,7 @@ async def enter_edit_gpt(callback: types.CallbackQuery, state: FSMContext, sessi
 
 
 @ai_func.message(AISelected.image_editing, F.text)
-async def editing_gpt(message: types.Message, state: FSMContext, bot: Bot, session: AsyncSession, http_session: aiohttp.ClientSession):
+async def editing(message: types.Message, state: FSMContext, bot: Bot, session: AsyncSession, http_session: aiohttp.ClientSession):
 
     #реализовать добавление фото
     model = 'img2img'

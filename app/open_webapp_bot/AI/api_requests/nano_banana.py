@@ -15,6 +15,7 @@ client = OpenAI(
 
 
 async def nano_banana(prompt: str, images: list = None,):
+    response = None
     if images:
         content = [
         {
@@ -65,5 +66,6 @@ async def nano_banana(prompt: str, images: list = None,):
         return image_bytes
 
     except Exception as e:
+        print(response)
         print(e)
         return 'К сожалению, произошла ошибка. Пожалуйста, повторите попытку\nЕсли ошибка продолжает возникать, дайте нам знать @aitb_support'
