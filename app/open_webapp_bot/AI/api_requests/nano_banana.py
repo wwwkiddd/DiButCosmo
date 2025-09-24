@@ -56,7 +56,7 @@ async def nano_banana(prompt: str, images: list = None,):
             messages=request
         )
 
-        print(response.choices[0].message.content)
+        print(response)
         ans = response.choices[0].message.content
 
 
