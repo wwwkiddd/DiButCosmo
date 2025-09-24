@@ -776,7 +776,7 @@ async def editing(message: types.Message, state: FSMContext, bot: Bot, session: 
 
     await message.answer("🧠 Обрабатываю, пожалуйста подождите.\nГенерация займет 2-3 минуты...")
     try:
-        image_out = await nano_banana(prompt, image)
+        image_out = await nano_banana(prompt, [image])
 
     except Exception as e:
         print(e)
