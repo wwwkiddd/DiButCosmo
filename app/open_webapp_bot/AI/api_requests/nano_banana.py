@@ -17,6 +17,7 @@ client = OpenAI(
 async def nano_banana(prompt: str, images: list = None,):
     response = None
     if images:
+
         content = [
         {
           "type": "text",
