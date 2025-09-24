@@ -14,11 +14,6 @@ client = OpenAI(
 
 async def grok_for_receipt(prompt: str = None, image = None,):
     print('grok')
-    if image:
-        print('its_image')
-        b64_image = base64.b64encode(image.read()).decode('utf-8')
-        print('yes')
-
     if image and prompt:
         request = [{
             "role": "user",
@@ -30,7 +25,7 @@ async def grok_for_receipt(prompt: str = None, image = None,):
         {
           "type": "image_url",
           "image_url": {
-            "url": f"data:image/jpeg;base64,{b64_image}"
+            "url": f"data:image/jpeg;base64,{image}"
           }
         }
       ]

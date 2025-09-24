@@ -18,10 +18,6 @@ client = OpenAI(
 
 async def gpt_5(session: AsyncSession, user_id: int, prompt: str = None, image = None,):
     print('gpt-5')
-    if image:
-        print('its_image')
-        b64_image = base64.b64encode(image.read()).decode('utf-8')
-        print('yes')
 
     if image and prompt:
         await orm_update_gpt_chat_history(session, [{
@@ -34,12 +30,13 @@ async def gpt_5(session: AsyncSession, user_id: int, prompt: str = None, image =
         {
           "type": "image_url",
           "image_url": {
-            "url": f"data:image/jpeg;base64,{b64_image}"
+            "url": f"data:image/jpeg;base64,{image}"
           }
         }
       ]
         }], user_id)
         print('image and text added to history')
+
     elif image:
         print('working on histiry')
         await orm_update_gpt_chat_history(session, [{
@@ -52,7 +49,7 @@ async def gpt_5(session: AsyncSession, user_id: int, prompt: str = None, image =
         {
           "type": "image_url",
           "image_url": {
-            "url": f"data:image/jpeg;base64,{b64_image}"
+            "url": f"data:image/jpeg;base64,{image}"
           }
         }
       ],

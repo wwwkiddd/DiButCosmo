@@ -240,9 +240,8 @@ async def text_gpt(message: types.Message, session: AsyncSession, bot: Bot, http
 
             elif message.photo:
                 print('its photo')
-                image, file = await get_image_for_ai(bot, http_session, user_id=user_id,
+                image= await get_image_for_ai(bot, http_session, user_id=user_id,
                                                       photo_id=message.photo[-1].file_id)
-                os.remove(file)
 
                 response = await gpt_5(session, user_id, prompt=message.caption, image=image)
 
@@ -300,9 +299,8 @@ async def text_perplexity(message: types.Message, bot: Bot, session: AsyncSessio
             image = None
 
             if message.photo:
-                image, file = await get_image_for_ai(bot, http_session, user_id=user_id,
+                image = await get_image_for_ai(bot, http_session, user_id=user_id,
                                                      photo_id=message.photo[-1].file_id)
-                os.remove(file)
 
 
                 content  = message.caption if message.caption else 'Опиши фото'
@@ -482,9 +480,8 @@ async def get_receipt(message: types.Message, bot: Bot, session: AsyncSession, h
             await message.answer("🧠 Обрабатываю, пожалуйста подождите...")
             image = None
             if message.photo:
-                image, file = await get_image_for_ai(bot, http_session, user_id=user_id,
+                image = await get_image_for_ai(bot, http_session, user_id=user_id,
                                                      photo_id=message.photo[-1].file_id)
-                os.remove(file)
 
                 user_prompt = 'Ты помощник по питанию. Изучи фото определи какие продукты на нем, напиши рецепты блюд которые можно из низ приготовить, добавь КБЖУ для каждого блюда. В конце ответа не задавай вопросы'
                 if message.caption:
@@ -597,7 +594,7 @@ async def to_nano_banana(message: types.Message, bot: Bot, state: FSMContext, se
 
 
 
-            image, file = await get_image_for_ai(bot, http_session, user_id=user_id, photo_id=message.photo[-1].file_id)
+            image= await get_image_for_ai(bot, http_session, user_id=user_id, photo_id=message.photo[-1].file_id)
             await state.update_data(image_adding=key)
             await state.set_state(AISelected.image_adding)
 
@@ -609,7 +606,6 @@ async def to_nano_banana(message: types.Message, bot: Bot, state: FSMContext, se
 
             await message.answer("🧠 Обрабатываю, пожалуйста подождите.\nГенерация займет 2-3 минуты...\nПожалуйста, не переходите в другой режим пока не закончится генерация")
             image_out = await nano_banana(prompt, users_collages[key])
-            os.remove(file)
             images.append(users_collages[key])
 
 
@@ -648,9 +644,8 @@ async def to_nano_banana(message: types.Message, bot: Bot, state: FSMContext, se
             users_collages[key] = []
 
 
-            image, file = await get_image_for_ai(bot, http_session, user_id=user_id, photo_id=message.photo[-1].file_id)
+            image = await get_image_for_ai(bot, http_session, user_id=user_id, photo_id=message.photo[-1].file_id)
             users_collages[key].append(image)
-            os.remove(file)
 
             await state.update_data(image_adding=key)
             await state.set_state(AISelected.image_adding)
@@ -776,13 +771,12 @@ async def editing(message: types.Message, state: FSMContext, bot: Bot, session: 
     prompt = message.text
     data = await state.get_data()
     image_bytes = data['image'][-2]
-    image, file = await get_image_for_ai(bot, http_session, user_id=message.from_user.id, photo_bytes=image_bytes)
+    image = await get_image_for_ai(bot, http_session, user_id=message.from_user.id, photo_bytes=image_bytes)
     print(image)
 
     await message.answer("🧠 Обрабатываю, пожалуйста подождите.\nГенерация займет 2-3 минуты...")
     try:
         image_out = await nano_banana(prompt, image)
-        os.remove(file)
 
     except Exception as e:
         print(e)

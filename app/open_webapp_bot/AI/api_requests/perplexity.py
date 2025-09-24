@@ -19,10 +19,6 @@ client = OpenAI(
 
 async def perp_send_request(session: AsyncSession, user_id: int, prompt: str = None, image = None):
     print('to perplexity')
-    if image:
-        print('its_image')
-        b64_image = base64.b64encode(image.read()).decode('utf-8')
-        print('yes')
 
     if image and prompt:
         await orm_update_perplexity_chat_history(session, [{
@@ -35,14 +31,14 @@ async def perp_send_request(session: AsyncSession, user_id: int, prompt: str = N
         {
           "type": "image_url",
           "image_url": {
-            "url": f"data:image/jpeg;base64,{b64_image}"
+            "url": f"data:image/jpeg;base64,{image}"
           }
         }
       ]
         }], user_id)
         print('image and text added to history')
     elif image:
-        print('working on histiry')
+        print('working on history')
         await orm_update_perplexity_chat_history(session, [{
             "role": "user",
             "content": [
@@ -53,7 +49,7 @@ async def perp_send_request(session: AsyncSession, user_id: int, prompt: str = N
         {
           "type": "image_url",
           "image_url": {
-            "url": f"data:image/jpeg;base64,{b64_image}"
+            "url": f"data:image/jpeg;base64,{image}"
           }
         }
       ],
