@@ -89,7 +89,11 @@ async def get_image_for_ai(bot: Bot, http_session: aiohttp.ClientSession, user_i
     with open(file, "wb") as f:
         f.write(bytes)
 
-    return open(file, "rb"), file
+    with open(file, "rb") as f:
+        b64_image = base64.b64encode(f.read()).decode('utf-8')
+
+    os.remove(file)
+    return b64_image
 
 async def send_typing_action(bot: Bot, chat_id: int, stop_event: asyncio.Event, delay: float = 4.0):
     while not stop_event.is_set():

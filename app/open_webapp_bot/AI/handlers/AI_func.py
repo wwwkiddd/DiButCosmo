@@ -598,7 +598,6 @@ async def to_nano_banana(message: types.Message, bot: Bot, state: FSMContext, se
 
 
             image, file = await get_image_for_ai(bot, http_session, user_id=user_id, photo_id=message.photo[-1].file_id)
-            users_collages[key].append(image)
             await state.update_data(image_adding=key)
             await state.set_state(AISelected.image_adding)
 
@@ -608,19 +607,11 @@ async def to_nano_banana(message: types.Message, bot: Bot, state: FSMContext, se
                  return
 
 
-            try:
-                await message.answer("🧠 Обрабатываю, пожалуйста подождите.\nГенерация займет 2-3 минуты...\nПожалуйста, не переходите в другой режим пока не закончится генерация")
-                image_out = await nano_banana(prompt, users_collages[key])
-                os.remove(file)
-            except BadRequestError as e:
-                print(e)
-                if e.code == 'moderation_blocked':
-                    await message.answer('🤖 К сожалению, я не могу создать это фото, так как запрос противоречит моей политике в отношении контента.')
-                return
-            except Exception as e:
-                print(e)
-                await message.answer('Возникла непредвиденная ошибка, пожалуйста, повторите попытку позже.\n Если ошибка продолжает возникать, дайте нам знать @aitb_support')
-                return
+            await message.answer("🧠 Обрабатываю, пожалуйста подождите.\nГенерация займет 2-3 минуты...\nПожалуйста, не переходите в другой режим пока не закончится генерация")
+            image_out = await nano_banana(prompt, users_collages[key])
+            os.remove(file)
+            images.append(users_collages[key])
+
 
         else:
             await message.answer(
@@ -632,26 +623,16 @@ async def to_nano_banana(message: types.Message, bot: Bot, state: FSMContext, se
 
     elif message.caption and message.photo:
         if await check_balance(session, user_id, model):
-            image, file = await get_image_for_ai(bot, http_session, user_id=user_id, photo_id=message.photo[-1].file_id)
+            image = await get_image_for_ai(bot, http_session, user_id=user_id, photo_id=message.photo[-1].file_id)
             images.append(image)
             prompt = message.caption
 
 
 
-            try:
-                await message.answer("🧠 Обрабатываю, пожалуйста подождите.\nГенерация займет 2-3 минуты...")
-                image_out = await nano_banana(prompt, images)
-                os.remove(file)
 
-            except BadRequestError as e:
-                print(e)
-                if e.code == 'moderation_blocked':
-                    await message.answer('🤖 К сожалению, я не могу создать это фото, так как запрос противоречит моей политике в отношении контента.')
-                return
-            except Exception as e:
-                print(e)
-                await message.answer('Возникла непредвиденная ошибка, пожалуйста, повторите попытку позже.\nЕсли ошибка продолжает возникать, дайте нам знать @aitb_support')
-                return
+            await message.answer("🧠 Обрабатываю, пожалуйста подождите.\nГенерация займет 2-3 минуты...")
+            image_out = await nano_banana(prompt, images)
+
 
         else:
             await message.answer(
@@ -743,18 +724,8 @@ async def repeat_image(callback: types.CallbackQuery, state: FSMContext, session
 
         await callback.message.answer("🧠 Обрабатываю, пожалуйста подождите.\nГенерация займет 2-3 минуты...")
 
-        try:
-                image_out = await nano_banana(prompt, images)
-        except BadRequestError as e:
-            if e.code == 'moderation_blocked':
-                await callback.message.answer(
-                    '🤖 К сожалению, я не могу создать это фото, так как запрос противоречит моей политике в отношении контента.')
-            return
 
-        except Exception as e:
-            print(e)
-            await callback.message.answer('Возникла непредвиденная ошибка, пожалуйста, повторите попытку позже.\nЕсли ошибка продолжает возникать, дайте нам знать @aitb_support')
-            return
+        image_out = await nano_banana(prompt, images)
 
         await state.update_data(image=(prompt, images, image_out, model))
         input_file = BufferedInputFile(file=image_out, filename="your_image.jpeg")
