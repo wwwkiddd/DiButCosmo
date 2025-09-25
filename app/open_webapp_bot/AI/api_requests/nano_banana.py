@@ -35,7 +35,7 @@ async def nano_banana(prompt: str, images: list = None,):
                 }
             )
 
-            print('yes')
+            print('image' + image[:10])
 
         request = [{
             "role": "user",
