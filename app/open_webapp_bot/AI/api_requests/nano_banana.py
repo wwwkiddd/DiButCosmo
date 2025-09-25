@@ -23,6 +23,7 @@ async def nano_banana(prompt: str, images: list = None,):
           "type": "text",
           "text": prompt
         },]
+        print(len(images))
         for image in images:
 
             content.append(
