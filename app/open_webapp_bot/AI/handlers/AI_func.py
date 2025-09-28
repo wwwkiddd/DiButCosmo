@@ -59,7 +59,7 @@ class AISelected(StatesGroup):
     video_adding_prompt = State()
     video_editing = State()
 
-
+@ai_func.message(F.text == '🔙 Назад')
 @ai_func.callback_query(F.data == 'ai')
 async def start_ai(callback: types.CallbackQuery, state: FSMContext, session: AsyncSession):
     user_id = callback.from_user.id
@@ -100,7 +100,7 @@ async def start_ai(callback: types.CallbackQuery, state: FSMContext, session: As
 async def work_with_text(message: types.Message, state: FSMContext):
     await state.clear()
 
-    await message.answer('', reply_markup=del_kbd)
+
     await message.delete()
     await message.answer('В этом разделе представлены 2 генеративные модели:\n\n'
                          '1) Лёгкая модель способна быстро отвечать на простые вопросы \n'
