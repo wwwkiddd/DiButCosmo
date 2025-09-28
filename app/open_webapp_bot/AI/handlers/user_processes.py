@@ -48,7 +48,7 @@ async def balance_cmd(message: types.Message, session: AsyncSession):
                                'Пополнить баланс ты можешь несколькими способами:\n- Купить токены 💰\n- Выполнить задания 🎯\n- Ввести промокод', reply_markup=kbd_tk)
 
 ################################## PAYMENTS ####################################################################
-@user_processes_ai.callback_query(F.data == 'pay')
+@user_processes_ai.callback_query(F.data == 'pay_for_ai')
 async def payment_proc(callback: types.CallbackQuery):
 
     await callback.answer()

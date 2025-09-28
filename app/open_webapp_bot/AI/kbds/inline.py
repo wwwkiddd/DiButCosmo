@@ -29,6 +29,6 @@ def get_callback_btns(*, btns: dict[str,str], sizes: tuple[int] = (2,)):
     return keyboard.adjust(*sizes).as_markup()
 
 kbd_tk = get_callback_btns(btns={
-        '💰 Купить токены': 'pay',
+        '💰 Купить токены': 'pay_for_ai',
         '🎯 Задания': 'challenge',
         'Промокод': 'user_promo_code'})
