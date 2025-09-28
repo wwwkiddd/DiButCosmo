@@ -25,7 +25,7 @@ from app.open_webapp_bot.AI.database.orm_query import orm_delete_gpt_chat_histor
 # from openai import BadRequestError
 #
 from app.open_webapp_bot.AI.kbds.inline import get_callback_btns, kbd_tk
-from app.open_webapp_bot.AI.kbds.reply import main_kbd, get_keyboard, text_kbd, del_kbd
+from app.open_webapp_bot.AI.kbds.reply import main_kbd, get_keyboard, text_kbd
 from app.open_webapp_bot.AI.handlers.processing import check_balance, send_typing_action, get_image_for_ai, \
     send_long_text, \
     use_model, get_image_for_video
@@ -60,6 +60,18 @@ class AISelected(StatesGroup):
     video_editing = State()
 
 @ai_func.message(F.text == '🔙 Назад')
+async def back_to_start_ai(message: types.Message, state: FSMContext, session: AsyncSession):
+
+    await message.answer(
+        '<b>✨ Привет, я собрал в себе все популярные нейросети для вашего удобства!</b>\n\n<u>Вот что я умею:</u>\n\n'
+        '📝 Генерировать текст\n\n'
+        '🖼️ Создавать и редактировать изображения\n\n'
+        '‍👨‍🍳 Подбирать рецепты по фото продуктов и рассчитывать КБЖУ\n\n'
+        '<i>Чтобы узнать больше выберите режим 👇</i>',
+        reply_markup=main_kbd)
+
+    await state.clear()
+
 @ai_func.callback_query(F.data == 'ai')
 async def start_ai(callback: types.CallbackQuery, state: FSMContext, session: AsyncSession):
     user_id = callback.from_user.id
@@ -83,8 +95,6 @@ async def start_ai(callback: types.CallbackQuery, state: FSMContext, session: As
         '<b>✨ Привет, я собрал в себе все популярные нейросети для вашего удобства!</b>\n\n<u>Вот что я умею:</u>\n\n'
         '📝 Генерировать текст\n\n'
         '🖼️ Создавать и редактировать изображения\n\n'
-        '🎬 Генерировать видео\n\n'
-        '🎸 Писать и изменять музыку\n\n'
         '‍👨‍🍳 Подбирать рецепты по фото продуктов и рассчитывать КБЖУ\n\n'
         '<i>Чтобы узнать больше выберите режим 👇</i>',
         reply_markup=main_kbd)
@@ -92,8 +102,8 @@ async def start_ai(callback: types.CallbackQuery, state: FSMContext, session: As
 
 
     await state.clear()
-#
-#
+
+
 ################################## For FSM ####################################################################
 
 @ai_func.message(F.text == '📝 Текст')
