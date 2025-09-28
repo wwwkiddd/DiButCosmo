@@ -17,6 +17,7 @@ from app.open_webapp_bot.AI.api_requests.grok import grok_for_receipt
 from app.open_webapp_bot.AI.api_requests.nano_banana import nano_banana
 from app.open_webapp_bot.AI.api_requests.open_ai import gpt_5
 from app.open_webapp_bot.AI.api_requests.perplexity import perp_send_request
+from app.open_webapp_bot.AI.api_requests.video import veo_text_to_video
 from app.open_webapp_bot.AI.database.orm_query import orm_delete_gpt_chat_history, orm_get_user, orm_add_user, \
     orm_update_user_name, orm_update_first_name, orm_update_last_name, orm_delete_perplexity_chat_history, \
     orm_delete_gemini_chat_history
@@ -920,6 +921,7 @@ ratios = ['16:9','4:3','1:1','3:4','9:16','21:9','9:21']
 
 @ai_func.message(AISelected.video)
 async def video(message: types.Message, bot: Bot, state: FSMContext, session: AsyncSession, http_session: aiohttp.ClientSession):
+    print('lets go make video')
     user_id = message.from_user.id
     model = 'video'
     if await check_balance(session, user_id, 'video'):
@@ -951,12 +953,343 @@ async def video(message: types.Message, bot: Bot, state: FSMContext, session: As
             image_data = await get_image_for_video(image)
 
             if message.caption:
-                prompt =message.caption
+                prompt = message.caption
             else:
                 await state.update_data(video_adding_prompt=image_data)
                 await state.set_state(AISelected.video_adding_prompt)
                 await message.answer('Отлично! Теперь напиши, что сделать с этим фото...')
                 return
 
+
         elif message.text:
+
             prompt = message.text
+
+            for r in ratios:
+
+                if r in prompt:
+                    ratio = r
+
+                    break
+
+
+        elif message.document:
+
+            await message.answer('Пожалуйста, отправьте фото другим способом')
+
+            return
+
+
+        else:
+
+            return
+
+        if 'продлить' in prompt.lower():
+
+            if await check_balance(session, user_id, 'video_long'):
+
+                long = True
+
+                ind = prompt.lower().find('продлить')
+
+                prompt = prompt[ind + 7:]
+
+                model = 'video_long'
+
+            else:
+
+                await message.answer(
+
+                    'К сожалению, у вас закончились токены.\n\n Пожалуйста, пополните счёт, и я с удовольствием вы      полню ваш запрос!',
+
+                    reply_markup=kbd_tk)
+
+                return
+
+        await message.answer("🧠 Обрабатываю, пожалуйста подождите.\nГенерация займет около 2 минут...")
+
+        await state.update_data(video=(prompt, ratio, image_data, long))
+
+        try:
+
+            video_url = await veo_text_to_video(http_session, prompt, ratio, image_data, long)
+
+        except Exception as e:
+
+            print(e)
+
+            await message.answer(
+
+                'Возникла непредвиденная ошибка, пожалуйста, повторите попытку позже.\nЕсли ошибка продолжает возникать, дайте нам знать @aitb_support')
+
+            return
+
+        if image:
+            os.remove(image)
+
+            print(f'deleted from {image}')
+
+        await message.answer_video(video=video_url, caption='Ваше видео😌', reply_markup=get_callback_btns(btns={
+
+            '🔄 Повторить': 'repeat',
+
+            '✏️ Изменить': 'edit'
+
+        }))
+
+        await use_model(session, user_id, model)
+
+
+    else:
+
+        await message.answer(
+
+            'К сожалению, у вас закончились токены.\n\n Пожалуйста, пополните счёт, и я с удовольствием выполню ваш запрос!',
+
+            reply_markup=kbd_tk)
+
+
+@ai_func.message(AISelected.video_adding_prompt, F.text)
+async def video_add_prompt(message: types.Message, state: FSMContext, session: AsyncSession,
+                           http_session: aiohttp.ClientSession):
+    user_id = message.from_user.id
+
+    ratio = '16:9'
+
+    long = False
+
+    model = 'video'
+
+    data = await state.get_data()
+
+    image_data = data['video_adding_prompt']
+
+    prompt = message.text
+
+    if 'продлить' in prompt.lower():
+
+        if await check_balance(session, user_id, 'video_long'):
+
+            long = True
+
+            ind = prompt.lower().find('продлить')
+
+            prompt = prompt[ind + 7:]
+
+            model = 'video_long'
+
+        else:
+
+            await message.answer(
+
+                'К сожалению, у вас закончились токены.\n\n Пожалуйста, пополните счёт, и я с удовольствием выполню ваш запрос!',
+
+                reply_markup=kbd_tk)
+
+            return
+
+    await message.answer("🧠 Обрабатываю, пожалуйста подождите.\nГенерация займет около 2 минут...")
+
+    try:
+
+        video_url = await veo_text_to_video(http_session, prompt, ratio, image_data, long)
+
+    except Exception as e:
+
+        print(e)
+
+        await message.answer(
+
+            'Возникла непредвиденная ошибка, пожалуйста, повторите попытку позже.\nЕсли ошибка продолжает возникать, дайте нам знать @aitb_support')
+
+        return
+
+    await state.update_data(video=(prompt, ratio, image_data, long))
+
+    try:
+
+        await message.answer_video(video=video_url, caption='Ваше видео😌', reply_markup=get_callback_btns(btns={
+
+            '🔄 Повторить': 'repeat',
+
+            '✏️ Изменить': 'edit'
+
+        }))
+
+    except Exception as e:
+
+        print(e)
+
+        await message.answer(
+            'Возникла непредвиденная ошибка, пожалуйста, повторите попытку.\nЕсли ошибка продолжает возникать, дайте нам знать @aitb_support')
+
+        return
+
+    await use_model(session, user_id, model)
+
+    await state.set_state(AISelected.video)
+
+
+@ai_func.callback_query(AISelected.video, F.data == 'repeat')
+async def video_repeat(callback: types.CallbackQuery, state: FSMContext, session: AsyncSession,
+                       http_session: aiohttp.ClientSession):
+    user_id = callback.from_user.id
+
+    data = await state.get_data()
+
+    video_data = data['video']
+
+    prompt = video_data[0]
+
+    ratio = video_data[1]
+
+    image_data = video_data[-2]
+
+    long = video_data[-1]
+
+    if long:
+
+        model = 'video_long'
+
+    else:
+
+        model = 'video'
+
+    if await check_balance(session, user_id, model):
+
+        await callback.answer()
+
+        await callback.message.answer("🧠 Обрабатываю, пожалуйста подождите.\nГенерация займет около 2 минут...")
+
+        try:
+
+            video_url = await veo_text_to_video(http_session, prompt, ratio, image_data, long)
+
+        except Exception as e:
+
+            print(e)
+
+            await callback.message.answer(
+
+                'Возникла непредвиденная ошибка, пожалуйста, повторите попытку позже.\nЕсли ошибка продолжает возникать, дайте нам знать @aitb_support')
+
+            return
+
+        try:
+
+            await callback.message.answer_video(video=video_url, caption='Ваше видео😌',
+                                                reply_markup=get_callback_btns(btns={
+
+                                                    '🔄 Повторить': 'repeat',
+
+                                                    '✏️ Редактировать': 'edit'
+
+                                                }))
+
+        except Exception as e:
+
+            await callback.message.answer(
+                'Возникла непредвиденная ошибка, пожалуйста, повторите попытку.\nЕсли ошибка продолжает возникать, дайте нам знать @aitb_support')
+
+            return
+
+        await use_model(session, user_id, model)
+
+
+    else:
+
+        await callback.message.answer(
+
+            'К сожалению, у вас закончились токены.\n\n Пожалуйста, пополните счёт, и я с удовольствием выполню ваш запрос!',
+
+            reply_markup=kbd_tk)
+
+
+@ai_func.callback_query(AISelected.video, F.data == 'edit')
+async def video_enter_edit(callback: types.CallbackQuery, state: FSMContext, session: AsyncSession):
+    data = await state.get_data()
+
+    long = data['video'][-1]
+
+    user_id = callback.from_user.id
+
+    if long:
+
+        model = 'video_long'
+
+    else:
+
+        model = 'video'
+
+    if await check_balance(session, user_id, model):
+
+        await callback.answer()
+
+        await callback.message.answer("Что бы вы хотели изменить?")
+
+        await state.set_state(AISelected.video_editing)
+
+    else:
+
+        await callback.message.answer(
+
+            'К сожалению, у вас закончились токены.\n\n Пожалуйста, пополните счёт, и я с удовольствием выполню ваш запрос!',
+
+            reply_markup=kbd_tk)
+
+
+@ai_func.message(AISelected.video_editing, F.text)
+async def editing_video(message: types.Message, state: FSMContext, session: AsyncSession,
+                        http_session: aiohttp.ClientSession):
+    await message.answer("🧠 Обрабатываю, пожалуйста подождите.\nГенерация займет около 2 минут...")
+
+    data = await state.get_data()
+
+    video_data = data['video']
+
+    prompt = video_data[0] + message.text
+
+    ratio = video_data[1]
+
+    image_data = video_data[-2]
+
+    long = video_data[-1]
+
+    if long:
+
+        model = 'video_long'
+
+    else:
+
+        model = 'video'
+
+    await state.update_data(video=(prompt, ratio, image_data, long))
+
+    try:
+
+        video_url = await veo_text_to_video(http_session, prompt, ratio, image_data, long)
+
+    except Exception as e:
+
+        print(e)
+
+        await message.answer(
+
+            'Возникла непредвиденная ошибка, пожалуйста, повторите попытку позже.\nЕсли ошибка продолжает возникать, дайте нам знать @aitb_support')
+
+        return
+
+    await message.answer_video(video=video_url, caption='Ваше видео😌',
+
+                               reply_markup=get_callback_btns(btns={
+
+                                   '🔄 Повторить': 'repeat',
+
+                                   '✏️ Редактировать': 'edit'
+
+                               }))
+
+    await use_model(session, message.from_user.id, model)
+
+    await state.set_state(AISelected.video)
+
