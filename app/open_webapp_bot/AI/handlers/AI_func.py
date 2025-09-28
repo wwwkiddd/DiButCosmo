@@ -536,11 +536,10 @@ async def image_adding_gpt(message: types.Message, state: FSMContext, session: A
     key = data['image_adding']
     model = 'img2img'
     images = users_collages[key]
-    print(images)
 
     try:
         await message.answer("🧠 Обрабатываю, пожалуйста подождите.\nГенерация займет 2-3 минуты...\nПожалуйста, не переходите в другой режим пока не закончится генерация")
-        image_out = await nano_banana(users_collages[key], prompt)
+        image_out = await nano_banana(prompt, users_collages[key])
     except BadRequestError as e:
         print(e)
         if e.code == 'moderation_blocked':
