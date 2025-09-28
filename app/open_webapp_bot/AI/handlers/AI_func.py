@@ -25,8 +25,9 @@ from app.open_webapp_bot.AI.database.orm_query import orm_delete_gpt_chat_histor
 #
 from app.open_webapp_bot.AI.kbds.inline import get_callback_btns, kbd_tk
 from app.open_webapp_bot.AI.kbds.reply import main_kbd, get_keyboard
-from app.open_webapp_bot.AI.handlers.processing import check_balance, send_typing_action, get_image_for_ai, send_long_text, \
-    use_model
+from app.open_webapp_bot.AI.handlers.processing import check_balance, send_typing_action, get_image_for_ai, \
+    send_long_text, \
+    use_model, get_image_for_video
 
 ai_func = Router()
 
@@ -162,20 +163,20 @@ async def work_with_image(message: types.Message, state: FSMContext):
     await state.set_state(AISelected.image)
 
 
-# @ai_func.message(F.text == '🎬 Видео')
-# async def work_with_image(message: types.Message, state: FSMContext):
-#     await message.delete()
-#     photo = FSInputFile('./files/aspect_ratio.png')
-#     await message.answer_photo(photo=photo, caption='✨ <b>Создавайте видео прямо в чате!</b> ✨ \n\n'
-#                                                     'Сгенерируйте видео только <i>по текстовому запросу</i> или, <i>прикрепив к сообщению фото</i>, которое станет начальным кадром.\n\n'
-#                                                     'По умолчанию видео длится 5 секунд, но можно его продлить до 10, для этого в запросе напишите "продлить" в начале запроса\n\n'
-#                                                     'Также вы можете указать в запросе соотношение сторон видео(см. фото)☝️\n\n'
-#                                                     'Цена генерации: 105 токенов (5 сек)\n'
-#                                                     '                            200 токенов (10 сек)')
-#
-#     await state.set_state(AISelected.video)
-#
-#
+@ai_func.message(F.text == '🎬 Видео')
+async def work_with_image(message: types.Message, state: FSMContext):
+    await message.delete()
+    photo = FSInputFile('./files/aspect_ratio.png')
+    await message.answer_photo(photo=photo, caption='✨ <b>Создавайте видео прямо в чате!</b> ✨ \n\n'
+                                                    'Сгенерируйте видео только <i>по текстовому запросу</i> или, <i>прикрепив к сообщению фото</i>, которое станет начальным кадром.\n\n'
+                                                    'По умолчанию видео длится 5 секунд, но можно его продлить до 10, для этого в запросе напишите "продлить" в начале запроса\n\n'
+                                                    'Также вы можете указать в запросе соотношение сторон видео(см. фото)☝️\n\n'
+                                                    'Цена генерации: 105 токенов (5 сек)\n'
+                                                    '                            200 токенов (10 сек)')
+
+    await state.set_state(AISelected.video)
+
+
 # @ai_func.message(F.text == '🎸 Музыка')
 # async def work_with_music(message: types.Message, state: FSMContext):
 #     await message.delete()
@@ -913,49 +914,49 @@ async def editing(message: types.Message, state: FSMContext, bot: Bot, session: 
 # ######################################################################################################
 #
 #
-# ################################## VIDEO #############################################################
-#
-# ratios = ['16:9','4:3','1:1','3:4','9:16','21:9','9:21']
-#
-# @ai_func.message(AISelected.video)
-# async def video(message: types.Message, bot: Bot, state: FSMContext, session: AsyncSession, http_session: aiohttp.ClientSession):
-#     user_id = message.from_user.id
-#     model = 'video'
-#     if await check_balance(session, user_id, 'video'):
-#
-#         ratio = '16:9'
-#         long = False
-#         image_data = None
-#         image = None
-#
-#         if message.photo:
-#             file_id = message.photo[-1].file_id
-#             file_info = await bot.get_file(file_id)
-#
-#             file_path = file_info.file_path
-#
-#             file_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
-#             async with http_session.get(file_url) as response:
-#                 if response.status != 200:
-#                     # Обработка ошибок HTTP
-#                     text = await response.text()
-#                     raise Exception(f"HTTP error {response.status}: {text}")
-#                 data = await response.content.read()
-#
-#                 image = f"files/image_for_video{user_id}.jpeg"
-#                 with open(image, "wb") as f:
-#                     f.write(data)
-#                     print(f'saved to {image}')
-#
-#             image_data = await get_image_for_video(image)
-#
-#             if message.caption:
-#                 prompt =message.caption
-#             else:
-#                 await state.update_data(video_adding_prompt=image_data)
-#                 await state.set_state(AISelected.video_adding_prompt)
-#                 await message.answer('Отлично! Теперь напиши, что сделать с этим фото...')
-#                 return
-#
-#         elif message.text:
-#             prompt = message.text
+################################## VIDEO #############################################################
+
+ratios = ['16:9','4:3','1:1','3:4','9:16','21:9','9:21']
+
+@ai_func.message(AISelected.video)
+async def video(message: types.Message, bot: Bot, state: FSMContext, session: AsyncSession, http_session: aiohttp.ClientSession):
+    user_id = message.from_user.id
+    model = 'video'
+    if await check_balance(session, user_id, 'video'):
+
+        ratio = '16:9'
+        long = False
+        image_data = None
+        image = None
+
+        if message.photo:
+            file_id = message.photo[-1].file_id
+            file_info = await bot.get_file(file_id)
+
+            file_path = file_info.file_path
+
+            file_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
+            async with http_session.get(file_url) as response:
+                if response.status != 200:
+                    # Обработка ошибок HTTP
+                    text = await response.text()
+                    raise Exception(f"HTTP error {response.status}: {text}")
+                data = await response.content.read()
+
+                image = f"files/image_for_video{user_id}.jpeg"
+                with open(image, "wb") as f:
+                    f.write(data)
+                    print(f'saved to {image}')
+
+            image_data = await get_image_for_video(image)
+
+            if message.caption:
+                prompt =message.caption
+            else:
+                await state.update_data(video_adding_prompt=image_data)
+                await state.set_state(AISelected.video_adding_prompt)
+                await message.answer('Отлично! Теперь напиши, что сделать с этим фото...')
+                return
+
+        elif message.text:
+            prompt = message.text
