@@ -166,7 +166,7 @@ async def work_with_image(message: types.Message, state: FSMContext):
 @ai_func.message(F.text == '🎬 Видео')
 async def work_with_image(message: types.Message, state: FSMContext):
     await message.delete()
-    photo = FSInputFile('./files/aspect_ratio.png')
+    photo = FSInputFile('app/open_webapp_bot/AI/files/aspect_ratio.png')
     await message.answer_photo(photo=photo, caption='✨ <b>Создавайте видео прямо в чате!</b> ✨ \n\n'
                                                     'Сгенерируйте видео только <i>по текстовому запросу</i> или, <i>прикрепив к сообщению фото</i>, которое станет начальным кадром.\n\n'
                                                     'По умолчанию видео длится 5 секунд, но можно его продлить до 10, для этого в запросе напишите "продлить" в начале запроса\n\n'
