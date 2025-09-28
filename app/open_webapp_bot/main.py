@@ -1,5 +1,6 @@
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.client.session.aiohttp import AiohttpSession
+from aiogram.fsm.context import FSMContext
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo, BotCommand, \
     BotCommandScopeAllPrivateChats
 from aiogram.enums import ParseMode
@@ -33,7 +34,9 @@ dp.include_router(ai_func)
 http_session = AiohttpSession()
 
 @dp.message(F.text.lower() == "/start")
-async def start(message: types.Message):
+async def start(message: types.Message, state: FSMContext):
+    await state.clear()
+
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🚀 Создать бота", web_app=WebAppInfo(url=WEBAPP_URL))],
         [InlineKeyboardButton(text="💰 Оплатить подписку", callback_data="pay")],
