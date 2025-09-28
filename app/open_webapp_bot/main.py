@@ -1,6 +1,7 @@
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.client.session.aiohttp import AiohttpSession
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo, BotCommand, \
+    BotCommandScopeAllPrivateChats
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
 from aiogram.fsm.storage.memory import MemoryStorage
@@ -99,6 +100,8 @@ async def main():
     dp.update.middleware(DataBaseSession(session_pool=session_maker))
     http_client_session = await http_session.create_session()
     dp.update.middleware(HTTPSessionMiddleware(http_client_session))
+    await bot.set_my_commands(commands=[BotCommand(command='start', description='🔙 В главное меню')], scope=BotCommandScopeAllPrivateChats())
+
     await dp.start_polling(bot)
 
 

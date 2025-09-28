@@ -5,13 +5,13 @@ from aiogram.client.session import aiohttp
 
 API = os.getenv('API_VIDEO')
 
-async def veo_text_to_video(http_session: aiohttp.ClientSession, prompt: str, ratio: str, image, long: bool | None = None):
+async def veo_text_to_video(http_session: aiohttp.ClientSession, prompt: str, ratio: str, image = None, long: bool | None = None):
     # url_veo3 = "https://api.aimlapi.com/v2/generate/video/google/generation"
     url_bytedance = "https://api.aimlapi.com/v2/generate/video/bytedance/generation"
     if long:
-        duration = '10'
+        duration = 10
     else:
-        duration = '5'
+        duration = 5
 
     if image:
 
@@ -31,7 +31,7 @@ async def veo_text_to_video(http_session: aiohttp.ClientSession, prompt: str, ra
             "duration": duration,
         }
 
-    headers = {"Authorization": f"Bearer {API}", "Content-Type": "application/json"}
+    headers = {"Authorization": f"Bearer {API}"}
 
     async with http_session.post(url_bytedance, json=payload, headers=headers) as response:
         data = await response.json()

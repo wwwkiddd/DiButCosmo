@@ -21,10 +21,11 @@ del_kbd = ReplyKeyboardRemove()
 
 main_kbd = get_keyboard('📝 Текст',
                        '🖼️ Изображения',
-                       '🎬 Видео',
-                       '🎸 Музыка',
                        '👨‍🍳 Рецепты по фото',
                        '💲 Баланс',
                        '🤖❗️GPT 5❗️🤖',
                        placeholder='Выберите режим',
                        )
+
+
+text_kbd = get_keyboard('🗑 Отчистить историю диалога', '🔙 Назад')
