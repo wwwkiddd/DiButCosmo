@@ -15,8 +15,9 @@ from aiogram.client.default import DefaultBotProperties
 import json
 
 from dotenv import load_dotenv
-load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '.env'))
 
+# Загружаем .env из корня папки бота
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 logger = logging.getLogger(__name__)
@@ -27,6 +28,7 @@ REVIEWS_CHAT_LINK = os.getenv('REVIEWS_CHAT_LINK', '')
 
 DB_PATH = os.getenv('DB_PATH', 'bot_database.db')
 CONFIG_PATH = os.getenv('CONFIG_PATH', 'config.json')
+
 
 bot = Bot(
     token=BOT_TOKEN,
